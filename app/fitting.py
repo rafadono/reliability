@@ -1,5 +1,4 @@
 from reliability.Fitters import Fit_Everything
-import streamlit as st
 import pandas as pd
 
 def fit(dataframe: pd.DataFrame, columna: str, tipos_censurados: list) -> tuple:
