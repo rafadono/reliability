@@ -2,7 +2,8 @@ import pandas as pd
 import streamlit as st
 from app.data_processing import tratamiento, tipo_equipo, tbf
 from app.fitting import fit, fit_kijima
-from app.plotting import plot_pdf, plot_cdf, plot_comparison_kijima_trad, plot_comparison_failure_kijima_trad
+from app.plotting import plot_pdf, plot_cdf, plot_comparison_kijima_trad, plot_comparison_failure_kijima_trad, plot_reliability_efficiency, plot_repair_efficiency
+
 
 if "file_expanded" not in st.session_state:
     st.session_state["file_expanded"] = True
@@ -106,6 +107,7 @@ def streamlit_app() -> None:
     bic_tbx       = result_tbx['BIC']
     # 2) Kijima I & II para TBX
     kijima_tbx = fit_kijima(df_tbf_mdf, 'TBX', mdf_censurar, modelos=[1, 2])
+    #kijima_tbx = fit_kijima_global(df_tbf_mdf, 'TBX', mdf_censurar, modelos=[1, 2])
     # 3) Tradicional para TTX (sin Kijima)
     result_tbx = fit(df_tbf_mdf, 'TTX', mdf_censurar)
     best_dist_ttx = result_tbx['best_distribution']
@@ -169,7 +171,7 @@ def streamlit_app() -> None:
     with col_tiempo_max:
         tiempo_max = st.number_input(
             "Límite para gráficos (h):",
-            min_value=1.0, max_value=1e10, value=100.0
+            min_value=1.0, max_value=1e10, value=500.0
         )
 
     # Métricas puntuales para TBX
@@ -192,3 +194,14 @@ def streamlit_app() -> None:
     st.plotly_chart(fig_ttx_pdf, use_container_width=True)
     fig_ttx_cdf = plot_cdf(best_dist_ttx, tiempo_max)
     st.plotly_chart(fig_ttx_cdf, use_container_width=True)
+
+    # 1)Eficiencia en COnfiabilidad Kijima I
+    st.subheader("Eficiencia de Confiabilidad Kijima vs Tiempo")
+    tbx_arr  = df_tbf_mdf['TBX'].to_numpy()
+    deltas   = (df_tbf_mdf['mdf'].isin(mdf_censurar)).astype(int).to_numpy()
+    fig_rel = plot_reliability_efficiency(kijima_tbx)
+    st.plotly_chart(fig_rel, use_container_width=True)
+
+    st.subheader("Eficiencia de Mantenimiento Kijima vs Tiempo")
+    fig_rep = plot_repair_efficiency(tbx_arr, deltas, kijima_tbx)
+    st.plotly_chart(fig_rep, use_container_width=True)

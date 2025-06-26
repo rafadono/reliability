@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from app.kijima_model import reliability, pdf, calculate_virtual_age
 from typing import Union, List, Dict, Any
-from app.tests import calculate_aic_bic, r2_mrl, ks_test_kijima_pit
+from app.tests import calculate_aic_bic, ks_test_kijima_pit
 from app.kijima_model import _neg_loglik
 from scipy.optimize import minimize
 from scipy.integrate import quad
@@ -65,33 +65,67 @@ def fit_kijima(
     tipos_censurados: List[str],
     modelos: Union[int, List[int]] = 1
 ) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
-    # 1) Filtrado de filas completas
+
     df = dataframe.dropna(subset=[columna, 'mdf']).copy()
     df = df[df[columna] > 0]
 
-    # 2) Vector de tiempos y de fallas/censuras
     x = df[columna].to_numpy(dtype=float)
     delta = (~df['mdf'].isin(tipos_censurados)).astype(float).to_numpy()
+    T = np.insert(np.cumsum(x), 0, 0.0)
+    t_grid = np.linspace(0, T[-1], 300)
 
-    # 3) Asegurar lista de modelos
     modelos_list = modelos if isinstance(modelos, (list, tuple)) else [modelos]
-
     resultados = []
+
     for m in modelos_list:
-        # Ajuste y métricas
         res = process_model(m, x, delta)
         beta, eta, ar, ap = res['beta'], res['eta'], res['ar'], res['ap']
 
-        # Curvas desde 0 hasta x.max()
-        V = calculate_virtual_age(x, delta, ar, ap, m)
-        t = np.linspace(0, x.max(), 100)
-        R = reliability(t, V[-1], beta, eta)
-        failure_rate = pdf(t, V[-1], beta, eta) / R
+        # Edad virtual en cada evento
+        V = np.zeros_like(x)
+        v_prev = 0.0
+        for i in range(len(x)):
+            a = ar if delta[i] == 1 else ap
+            if m == 1:  # Kijima I
+                V[i] = v_prev + a * x[i]
+            elif m == 2:  # Kijima II
+                V[i] = a * (v_prev + x[i])
+            else:
+                raise ValueError("Solo se admite Kijima I (1) o II (2)")
+            v_prev = V[i]
+        V_full = np.insert(V, 0, 0.0)
+        # Inicialización de curvas
+        R = np.zeros_like(t_grid)
+        f = np.zeros_like(t_grid)
+        h = np.zeros_like(t_grid)
 
+        # Cálculo tramo a tramo
+        for i in range(len(T) - 1):
+            mask = (t_grid >= T[i]) & (t_grid < T[i + 1])
+            t_local = t_grid[mask] - T[i]
+            V_i = V_full[i]
+
+            vt_eta = (V_i + t_local) / eta
+            v0_eta = V_i / eta
+
+            R[mask] = np.exp(v0_eta ** beta - vt_eta ** beta)
+            f[mask] = (beta / eta) * (vt_eta) ** (beta - 1) * R[mask]
+            h[mask] = (beta / eta) * (vt_eta) ** (beta - 1)
+
+        # Último tramo (post-falla)
+        mask = t_grid >= T[-1]
+        t_local = t_grid[mask] - T[-1]
+        V_i = V_full[-1]
+
+        vt_eta = (V_i + t_local) / eta
+        v0_eta = V_i / eta
+
+        R[mask] = np.exp(v0_eta ** beta - vt_eta ** beta)
+        f[mask] = (beta / eta) * (vt_eta) ** (beta - 1) * R[mask]
+        h[mask] = (beta / eta) * (vt_eta) ** (beta - 1)
         resultados.append({
             'model_name':   res['modelo'],
             'beta':         beta,
-            
             'eta':          eta,
             'ar':           ar,
             'ap':           ap,
@@ -100,10 +134,10 @@ def fit_kijima(
             #'p_value':      res['p_value'],
             #'R2':           res['R^2'],
             'mean_R':       res['media'],
-            't':            t,
+            't':            t_grid,
             'R':            R,
-            'failure_rate': failure_rate,
-            'V':            V,
+            'failure_rate': h,
+            #'V_i':          V_i,
             'std':          res['std']
         })
 
@@ -113,15 +147,15 @@ def process_model(model_type, x, delta):
     params, llmax = fit_parameters(x, delta, model_type)
     beta, eta, ar, ap = params
     V = calculate_virtual_age(x, delta, ar, ap, model_type)
+    V_last = V[-1]  # Edad virtual al último evento
     #ks_stat, p_val = kolmogorov_smirnov_test(x, beta, eta)
     ks_stat, p_val = ks_test_kijima_pit(x, delta, beta, eta, ar, ap, model_type)
     aic, bic = calculate_aic_bic(llmax, 4, x.size)
-    mtbf, _ = quad(lambda t: reliability(t, V[-1], beta, eta), 0, np.inf)
-    E2, _ = quad(lambda t: 2*t * reliability(t, V[-1], beta, eta), 0, np.inf)
+    # MTBF esperado a partir del último V
+    mtbf, _ = quad(lambda t: reliability(t, V_last, beta, eta), 0, np.inf)
+    E2, _   = quad(lambda t: 2 * t * reliability(t, V_last, beta, eta), 0, np.inf)
     var = E2 - mtbf**2
     std = np.sqrt(var)
-    #r2 = calculate_r2_kijima_km(x, delta, V, beta, eta)
-    r2 = r2_mrl(x, delta, ar, ap, beta, eta, model_type)
     return {
         'modelo': f"Kijima {'I' if model_type==1 else 'II'}",
         'beta': beta, 
@@ -134,7 +168,7 @@ def process_model(model_type, x, delta):
         'media': mtbf, 
         'kolmogorov-smirnov': ks_stat,
         #'R^2': calculate_r2(x, V),
-        'R^2': r2,
+        #'R^2': r2,
         "std": std
     }
 
