@@ -92,17 +92,6 @@ def _neg_loglik(x, delta, beta, eta, ar, ap, model_type):
 
     return neg_ll
 
-def maintenance_efficiency(ar: float, ap: float) -> dict:
-    """
-    Devuelve índices de eficiencia de Correctivo y Preventivo:
-      E_CM = 1 - ar
-      E_PM = 1 - ap
-    """
-    return {
-        "E_CM": 1 - ar,
-        "E_PM": 1 - ap
-    }
-
 def virtual_age_ratio(x: np.ndarray, delta: np.ndarray, ar: float, ap: float, model_type: int) -> float:
     """
     Calcula el promedio de V_i / T_i para un modelo Kijima dado.
