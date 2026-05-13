@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.stats import kstest
 from scipy.integrate import quad
-from reliability.Nonparametric import KaplanMeier
 from app.kijima_model import pdf, calculate_virtual_age
 
 # Métricas: AIC, BIC, R², KS-test
@@ -17,39 +16,6 @@ def calculate_r2(x, V):
 
 def kolmogorov_smirnov_test(x, beta, eta):
     return kstest(x, 'weibull_min', args=(beta, 0, eta))
-
-def calculate_r2_kijima_km(x, delta, V, beta, eta):
-    # 1) tiempos efectivos
-    n = x.size
-    T_eff = np.empty(n, float)
-    for i in range(n):
-        v_prev   = V[i-1] if i > 0 else 0.0
-        T_eff[i] = v_prev + x[i]
-
-    # 2) separa fallas/censuras
-    failures       = T_eff[delta == 1]
-    right_censored = T_eff[delta == 0]
-
-    # 3) ajusta Kaplan–Meier
-    km = KaplanMeier(
-        failures=failures,
-        right_censored=right_censored,
-        show_plot=False,
-        print_results=False
-    )
-
-    # 4) usa la función stepwise SF (SF) y sus xvals
-    times = km.xvals
-    S_km  = km.SF
-
-    # 5) Calculo de la curva de confiabilidad
-    Vn      = float(V[-1])
-    R_model = np.exp((Vn/eta)**beta - ((Vn + times)/eta)**beta)
-
-    # 6) R² clásico
-    ss_tot = np.sum((S_km - S_km.mean())**2)
-    ss_res = np.sum((S_km - R_model)**2)
-    return 1.0 - ss_res/ss_tot
 
 def mean_residual_life(v_prev, beta, eta):
     def integrand(t: float) -> float:
