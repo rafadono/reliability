@@ -1,19 +1,27 @@
 import numpy as np
 import pandas as pd
 
+def validate_columns(df: pd.DataFrame, required_columns: list):
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"The input DataFrame is missing the following required columns: {missing_columns}")
+
 def tipo_equipo(df: pd.DataFrame, equipo: str):
+    validate_columns(df, ['Equipo', 'Tipo'])
     equipo_df =  df[df['Equipo'] ==  equipo].copy()
     equipo_df = equipo_df.reset_index(drop=True)
     lista_tipos = equipo_df.Tipo.unique()
     return lista_tipos
 
 def mdf_equipo(df: pd.DataFrame, equipo: str):
+    validate_columns(df, ['Equipo', 'mdf'])
     equipo_df =  df[df['Equipo'] ==  equipo].copy()
     equipo_df = equipo_df.reset_index(drop=True)
     lista_mdf = equipo_df.mdf.unique()
     return lista_mdf
 
 def tbf(df: pd.DataFrame, equipo_nombre: str, tipos: list):
+    validate_columns(df, ['Equipo', 'Fecha_Inicio', 'Fecha_Fin', 'Tipo', 'mdf', 'TTX'])
     df_equipo = df[df['Equipo'] == equipo_nombre].copy()
     df_equipo.sort_values(by='Fecha_Inicio', inplace=True)
     df_equipo.reset_index(drop=True, inplace=True)
@@ -37,6 +45,8 @@ def tbf(df: pd.DataFrame, equipo_nombre: str, tipos: list):
 
 def tratamiento(repo: pd.DataFrame):
     #repo = pd.read_csv("LS2 repo.csv", sep=';', decimal=",", encoding='latin-1')
+    validate_columns(repo, ['Fecha', 'Hora', 'Duracion', 'Tipo', 'Equipo', 'Modo de Falla'])
+
     repo['Fecha_Inicio'] = pd.to_datetime(repo['Fecha'] + ' ' + repo['Hora'], infer_datetime_format=True, dayfirst=True)
     repo = repo[['Fecha_Inicio', 'Duracion', 'Tipo', 'Equipo', 'Modo de Falla']]
     repo.drop_duplicates(inplace=True)
