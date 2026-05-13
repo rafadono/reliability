@@ -26,8 +26,12 @@ def streamlit_app() -> None:
         return
 
     # Lectura y preprocesamiento
-    df = pd.read_csv(uploaded_file, sep=';', decimal=",", encoding='latin-1')
-    repo = tratamiento(df)
+    try:
+        df = pd.read_csv(uploaded_file, sep=';', decimal=",", encoding='latin-1')
+        repo = tratamiento(df)
+    except Exception as e:
+        st.error(f"Error al procesar el archivo: {e}")
+        return
 
     # Selección de equipo y rango de fechas
     equipos = repo.Equipo.unique()
