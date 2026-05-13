@@ -132,7 +132,6 @@ def fit_kijima(
             'AIC':          res['AIC'],
             'BIC':          res['BIC'],
             #'p_value':      res['p_value'],
-            #'R2':           res['R^2'],
             'mean_R':       res['media'],
             't':            t_grid,
             'R':            R,
@@ -167,8 +166,6 @@ def process_model(model_type, x, delta):
         'p_value': p_val,
         'media': mtbf, 
         'kolmogorov-smirnov': ks_stat,
-        #'R^2': calculate_r2(x, V),
-        #'R^2': r2,
         "std": std
     }
 

@@ -9,11 +9,6 @@ def calculate_aic_bic(log_like, k, n):
     bic = np.log(n)*k - 2*log_like
     return aic, bic
 
-def calculate_r2(x, V):
-    ss_tot = np.sum((x - x.mean()) ** 2)
-    ss_res = np.sum((x - V) ** 2)
-    return 1.0 - ss_res / ss_tot
-
 def kolmogorov_smirnov_test(x, beta, eta):
     return kstest(x, 'weibull_min', args=(beta, 0, eta))
 
