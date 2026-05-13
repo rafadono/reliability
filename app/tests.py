@@ -15,9 +15,6 @@ def calculate_r2(x, V):
     ss_res = np.sum((x - V) ** 2)
     return 1.0 - ss_res / ss_tot
 
-def kolmogorov_smirnov_test(x, beta, eta):
-    return kstest(x, 'weibull_min', args=(beta, 0, eta))
-
 def calculate_r2_kijima_km(x, delta, V, beta, eta):
     # 1) tiempos efectivos
     n = x.size

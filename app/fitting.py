@@ -148,7 +148,6 @@ def process_model(model_type, x, delta):
     beta, eta, ar, ap = params
     V = calculate_virtual_age(x, delta, ar, ap, model_type)
     V_last = V[-1]  # Edad virtual al último evento
-    #ks_stat, p_val = kolmogorov_smirnov_test(x, beta, eta)
     ks_stat, p_val = ks_test_kijima_pit(x, delta, beta, eta, ar, ap, model_type)
     aic, bic = calculate_aic_bic(llmax, 4, x.size)
     # MTBF esperado a partir del último V
