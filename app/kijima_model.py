@@ -103,18 +103,6 @@ def maintenance_efficiency(ar: float, ap: float) -> dict:
         "E_PM": 1 - ap
     }
 
-def virtual_age_ratio(x: np.ndarray, delta: np.ndarray, ar: float, ap: float, model_type: int) -> float:
-    """
-    Calcula el promedio de V_i / T_i para un modelo Kijima dado.
-    - x: array de TBX
-    - delta: 1 para correcciones, 0 para preventivas
-    - ar, ap: parámetros de Kijima
-    - model_type: 1 o 2
-    """
-    V = calculate_virtual_age(x, delta, ar, ap, model_type)
-    T = np.cumsum(x)
-    return np.mean(V / T)
-
 def auc_improvement(beta: float, eta: float, Vn: float, t_max: float = None) -> float:
     """
     Compara el AUC de confiabilidad Kijima vs Weibull puro (ap=ar=1).
