@@ -12,16 +12,10 @@ from numba import njit
 
 # Kijima 1
 def calculate_ki(x: np.ndarray, delta: np.ndarray, ar: float, ap: float) -> np.ndarray:
-    V = np.zeros_like(x, dtype=float)
-    v_prev = 0.0
-    for i in range(len(x)):
-        a = ar if delta[i] == 1.0 else ap
-        v_i = v_prev + a*x[i]
-        #if v_i < v_prev:
-        #    print(f"k1 [ERROR] v_{i} < v_{i-1}: {v_i:.3f} < {v_prev:.3f} | a={a}, x={x[i]}")
-        V[i] = v_i
-        v_prev = v_i
-    return V
+    # Kijima I: V_i = V_{i-1} + a_i * x_i
+    # Donde a_i = ar si falla (delta=1), ap si preventiva (delta=0)
+    a = np.where(delta == 1.0, ar, ap)
+    return np.cumsum(a * x)
 
 # Kijima 2
 #@njit(parallel=True)
