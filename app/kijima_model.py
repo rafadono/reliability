@@ -11,6 +11,7 @@ from numba import njit
 #    return ar**delta * ap**(1 - delta)
 
 # Kijima 1
+@njit(cache=True)
 def calculate_ki(x: np.ndarray, delta: np.ndarray, ar: float, ap: float) -> np.ndarray:
     V = np.zeros_like(x, dtype=float)
     v_prev = 0.0
@@ -24,18 +25,7 @@ def calculate_ki(x: np.ndarray, delta: np.ndarray, ar: float, ap: float) -> np.n
     return V
 
 # Kijima 2
-#@njit(parallel=True)
-#def _calculate_k2_general(x, ar, ap):
-#    n = x.size
-#    V = np.zeros(n, dtype=x.dtype)
-#    for i in prange(n):
-#        s = 0.0
-#        for j in range(i + 1):
-#            expo = i - j + 1
-#            s += x[j] * (ar[j]**expo) * (ap[j]**expo)
-#        V[i] = s
-#    return V
-
+@njit(cache=True)
 def calculate_k2(x: np.ndarray, delta: np.ndarray, ar: float, ap: float) -> np.ndarray:
     V = np.zeros_like(x, dtype=float)
     v_prev = 0.0
