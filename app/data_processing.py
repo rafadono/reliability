@@ -36,7 +36,6 @@ def tbf(df: pd.DataFrame, equipo_nombre: str, tipos: list):
 
 
 def tratamiento(repo: pd.DataFrame):
-    #repo = pd.read_csv("LS2 repo.csv", sep=';', decimal=",", encoding='latin-1')
     repo['Fecha_Inicio'] = pd.to_datetime(repo['Fecha'] + ' ' + repo['Hora'], infer_datetime_format=True, dayfirst=True)
     repo = repo[['Fecha_Inicio', 'Duracion', 'Tipo', 'Equipo', 'Modo de Falla']]
     repo.drop_duplicates(inplace=True)
