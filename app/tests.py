@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.stats import kstest
-from scipy.integrate import quad
-from app.kijima_model import pdf, calculate_virtual_age
+from app.kijima_model import calculate_virtual_age
 
 # Métricas: AIC, BIC, R², KS-test
 def calculate_aic_bic(log_like, k, n):
@@ -11,26 +10,6 @@ def calculate_aic_bic(log_like, k, n):
 
 def kolmogorov_smirnov_test(x, beta, eta):
     return kstest(x, 'weibull_min', args=(beta, 0, eta))
-
-def mean_residual_life(v_prev, beta, eta):
-    def integrand(t: float) -> float:
-        return t * pdf(t, v_prev, beta, eta)
-
-    mrl, _ = quad(integrand, 0, np.inf)
-    return mrl
-
-def r2_mrl(x, delta, ar, ap, beta, eta, model_type):
-    V = calculate_virtual_age(x, delta, ar, ap, model_type)
-    n = x.size
-    y_pred = np.empty(n)
-    for i in range(n):
-        v_prev = V[i-1] if i>0 else 0.0
-        y_pred[i] = mean_residual_life(v_prev, beta, eta)
-    # Mismo y_obs para todos:
-    y_obs = x
-    ss_tot = np.sum((y_obs - y_obs.mean())**2)
-    ss_res = np.sum((y_obs - y_pred)**2)
-    return 1 - ss_res/ss_tot
 
 def ks_test_weibull_pit(x, beta, eta):
     # PIT para Weibull puro
