@@ -21,15 +21,10 @@ def tbf(df: pd.DataFrame, equipo_nombre: str, tipos: list):
     df_equipo['Diferencia'] = (df_equipo['Fecha_Inicio'] - df_equipo['Fecha_Fin'].shift()).dt.total_seconds() / 3600
     df_equipo['Diferencia'].fillna(0, inplace=True)
 
-    df_tipos = df_equipo[df_equipo['Tipo'].isin(tipos)].copy()
-
-    indices = df_tipos.index.tolist()
+    mask = df_equipo['Tipo'].isin(tipos)
     df_equipo['TBX'] = 0.0
-
-    for i in range(len(indices) - 1):
-        suma_intervalo = np.sum(df_equipo['Diferencia'][indices[i]+1:indices[i+1]+1])
-        df_equipo.at[indices[i+1], 'TBX'] = suma_intervalo
-        #print(indices[i]+1, suma_intervalo, indices[i+1]+1)
+    if mask.any():
+        df_equipo.loc[mask, 'TBX'] = df_equipo['Diferencia'].cumsum()[mask].diff().fillna(0.0)
 
     #return df_equipo[['Equipo', 'Fecha_Inicio', 'Fecha_Fin', 'Tipo', 'mdf', 'Diferencia', 'TBX', 'TTX']]
     return df_equipo[['Equipo', 'Fecha_Inicio', 'Fecha_Fin', 'Tipo', 'mdf', 'TBX', 'TTX']]
