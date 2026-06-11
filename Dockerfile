@@ -16,6 +16,10 @@ WORKDIR /app
 # Dependencies stage
 FROM base as dependencies
 COPY backend/requirements.txt .
+ARG USE_GPU=0
+RUN if [ "$USE_GPU" = "0" ]; then \
+      uv pip install --no-cache-dir --system torch --index-url https://download.pytorch.org/whl/cpu; \
+    fi
 RUN uv pip install --no-cache-dir --system -r requirements.txt
 
 # Final stage

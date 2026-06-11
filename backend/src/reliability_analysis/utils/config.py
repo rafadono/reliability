@@ -54,3 +54,10 @@ KIJIMA_MODELS = [1, 2]  # Kijima I and II
 PLOT_WIDTH = 1000
 PLOT_HEIGHT = 600
 PLOT_GRID_POINTS = 200
+
+# Semantic NLP Configuration
+NLP_MODELS_TO_COMPARE = [
+    "Legacy Keyword NLP",
+    "cross-encoder/nli-distilroberta-base",
+    "Recognai/zeroshot_selectra_medium",
+]

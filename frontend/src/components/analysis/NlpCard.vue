@@ -15,6 +15,19 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-3 bg-gray-50 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
+        <!-- New Model Selector -->
+        <div v-if="availableModels.length > 0" class="flex items-center gap-2 mr-2 border-r border-gray-300 dark:border-slate-600 pr-4">
+          <label class="text-xs font-semibold text-gray-600 dark:text-slate-400">Model:</label>
+          <select 
+            v-model="selectedModel"
+            class="text-sm bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          >
+            <option v-for="model in availableModels" :key="model" :value="model">
+              {{ model }}
+            </option>
+          </select>
+        </div>
+
         <label class="flex items-center gap-2 cursor-pointer">
           <input 
             type="checkbox" 
@@ -46,12 +59,12 @@
       </div>
 
       <div v-else-if="loading" class="flex justify-center items-center py-12">
-        <span class="text-gray-500 dark:text-slate-400 animate-pulse text-sm">Mining text records...</span>
+        <span class="text-gray-500 dark:text-slate-400 animate-pulse text-sm">Mining text records... This will download AI models the first time.</span>
       </div>
 
-      <div v-else-if="miningData && miningData.total_comments > 0" class="space-y-6">
+      <div v-else-if="miningData && miningData.total_comments > 0 && selectedModelData" class="space-y-6">
         <!-- Stats summary -->
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="bg-indigo-50 dark:bg-indigo-950/20 p-4 rounded-lg border border-indigo-100/10">
             <p class="text-xs text-gray-600 dark:text-slate-400">Comments Found</p>
             <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-450">{{ miningData.total_comments }}</p>
@@ -60,6 +73,10 @@
             <p class="text-xs text-gray-600 dark:text-slate-400">Coverage Percentage</p>
             <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-450">{{ miningData.coverage.toFixed(1) }}%</p>
           </div>
+          <div class="col-span-2 bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-100/10">
+            <p class="text-xs text-gray-600 dark:text-slate-400">Execution Time ({{ selectedModel }})</p>
+            <p class="text-2xl font-bold text-amber-600 dark:text-amber-450">{{ selectedModelData.execution_time_seconds.toFixed(2) }}s</p>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -67,7 +84,7 @@
           <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
             <h3 class="font-bold text-gray-800 dark:text-white mb-4">Top Keywords in Logs</h3>
             <div class="space-y-3">
-              <div v-for="item in miningData.keywords" :key="item.word" class="space-y-1">
+              <div v-for="item in selectedModelData.keywords" :key="item.word" class="space-y-1">
                 <div class="flex justify-between text-xs font-semibold text-gray-700 dark:text-slate-300">
                   <span class="capitalize">{{ item.word }}</span>
                   <span>{{ item.count }} occurrences</span>
@@ -84,9 +101,9 @@
 
           <!-- Semantic categories breakdown -->
           <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
-            <h3 class="font-bold text-gray-800 dark:text-white mb-4">Categorized Failure Sources & Asset Crosses</h3>
+            <h3 class="font-bold text-gray-800 dark:text-white mb-4">Categorized Failure Sources</h3>
             <div class="space-y-3">
-              <div v-for="cat in miningData.categories" :key="cat.category" class="p-3 bg-gray-50/50 dark:bg-slate-900/30 rounded border border-gray-150/40 dark:border-slate-700/50">
+              <div v-for="cat in selectedModelData.categories" :key="cat.category" class="p-3 bg-gray-50/50 dark:bg-slate-900/30 rounded border border-gray-150/40 dark:border-slate-700/50">
                 <div class="flex items-center justify-between mb-1.5">
                   <div class="flex items-center gap-2">
                     <div class="w-2.5 h-2.5 rounded-full" :class="getCategoryColorClass(cat.category)"></div>
@@ -127,26 +144,32 @@ const isCollapsed = ref(false)
 const isEnabled = ref(false)
 const loading = ref(false)
 const miningData = ref(null)
+const selectedModel = ref('')
+
+const availableModels = computed(() => {
+  if (!miningData.value || !miningData.value.results) return []
+  return Object.keys(miningData.value.results)
+})
+
+const selectedModelData = computed(() => {
+  if (!miningData.value || !miningData.value.results || !selectedModel.value) return null
+  return miningData.value.results[selectedModel.value]
+})
 
 const maxKeywordCount = computed(() => {
-  if (!miningData.value?.keywords || miningData.value.keywords.length === 0) return 1
-  return Math.max(...miningData.value.keywords.map(k => k.count))
+  const data = selectedModelData.value
+  if (!data || !data.keywords || data.keywords.length === 0) return 1
+  return Math.max(...data.keywords.map(k => k.count))
 })
 
 const getCategoryColorClass = (category) => {
   switch (category) {
-    case 'Operational':
-      return 'bg-blue-500'
-    case 'Cleaning/Blockage':
-      return 'bg-amber-500'
-    case 'Mechanical':
-      return 'bg-red-500'
-    case 'Electrical':
-      return 'bg-purple-500'
-    case 'Instrumentation/Failure':
-      return 'bg-emerald-500'
-    default:
-      return 'bg-gray-500'
+    case 'Operational': return 'bg-blue-500'
+    case 'Cleaning/Blockage': return 'bg-amber-500'
+    case 'Mechanical': return 'bg-red-500'
+    case 'Electrical': return 'bg-purple-500'
+    case 'Instrumentation/Failure': return 'bg-emerald-500'
+    default: return 'bg-gray-500'
   }
 }
 
@@ -156,6 +179,14 @@ const loadMiningData = async () => {
   try {
     const res = await apiService.getCommentMining()
     miningData.value = res.data
+    
+    // Auto-select the first available model if not set
+    if (miningData.value?.results) {
+      const models = Object.keys(miningData.value.results)
+      if (models.length > 0 && !models.includes(selectedModel.value)) {
+        selectedModel.value = models[0]
+      }
+    }
   } catch (err) {
     console.error('Error running text analysis:', err)
   } finally {

@@ -22,16 +22,21 @@ Modern, fast reliability engineering analysis platform built with Vue 3 and Fast
 
 The simplest way to run the entire stack is using Docker Compose:
 
-### 1. Build and Start the Stack
-```bash
-# Clean up any existing containers first
-docker-compose down
+### Installation via Docker (Recommended)
+1. Run `docker-compose up --build -d`
+2. Access the frontend at `http://localhost:5173` and the backend API at `http://localhost:8000`.
 
-# Build and start the services
-docker-compose up --build
-```
+### ⚠️ Important Note on AI Models and GPU/CPU
+This project uses Hugging Face AI models for semantic text analysis. 
+By default, the `docker-compose.yml` is configured to build using the **CPU version** of the AI frameworks (`USE_GPU: 0`). 
+If you are running this project on a powerful server or PC with an **Nvidia GPU**, you should enable GPU acceleration to make the text analysis exponentially faster:
+1. Open `docker-compose.yml`.
+2. Under the `backend` build section, change `USE_GPU: 0` to `USE_GPU: 1`.
+3. Rebuild your containers: `docker-compose up --build`.
 
-### 2. Access the Application
+*(Note: Automatic detection of a GPU during a Docker build is technically impossible because Docker isolates the build environment from the host's physical hardware. Therefore, this toggle must be changed manually).*
+
+### Access the Application
 * **Frontend Dashboard**: http://localhost:5173
 * **FastAPI Interactive Docs (Swagger)**: http://localhost:8000/docs
 * **FastAPI Alternative Docs (ReDoc)**: http://localhost:8000/redoc

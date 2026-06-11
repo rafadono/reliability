@@ -5,6 +5,10 @@ import numpy as np
 import logging
 import traceback
 
+import time
+from src.reliability_analysis.utils.config import NLP_MODELS_TO_COMPARE
+from src.reliability_analysis.analysis.hf_classifier import SemanticModelManager
+
 import state
 from models.requests import (
     ParetoRequest,
@@ -529,12 +533,7 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
     try:
         data = state.filter_manager.get_filtered_data()
         if data.empty:
-            return {
-                "status": "success",
-                "keywords": [],
-                "categories": [],
-                "coverage": 0.0,
-            }
+            return {"status": "success", "results": {}}
 
         comment_col = None
         for col in data.columns:
@@ -546,33 +545,29 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
             return {
                 "status": "warning",
                 "message": "No comment column found in dataset",
-                "keywords": [],
-                "categories": [],
+                "results": {},
             }
 
-        comments = data[comment_col].dropna().astype(str)
-        comments = comments[
-            ~comments.str.lower().isin(
-                ["---", "nan", "none", "null", "no aplica", "n/a"]
-            )
-        ]
+        comments_df = data.dropna(subset=[comment_col])
+        valid_mask = ~comments_df[comment_col].astype(str).str.lower().isin(
+            ["---", "nan", "none", "null", "no aplica", "n/a"]
+        )
+        valid_data = comments_df[valid_mask]
 
         total_records = len(data)
-        comments_count = len(comments)
+        comments_count = len(valid_data)
         coverage = (
             (comments_count / total_records * 100.0) if total_records > 0 else 0.0
         )
 
-        if comments.empty:
+        if valid_data.empty:
             return {
                 "status": "success",
-                "keywords": [],
-                "categories": [],
+                "results": {},
                 "coverage": 0.0,
                 "total_comments": 0,
             }
 
-        # Core stop words in both English and Spanish
         core_stop_words = {
             "de",
             "la",
@@ -701,8 +696,6 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
             "many",
             "then",
         }
-
-        # Generic terms we want to exclude from standalone keywords or joint bigrams (uninformative)
         generic_words = {
             "decision",
             "decisión",
@@ -807,8 +800,8 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
             "inspections",
         }
 
-        def clean_word(word: str) -> str:
-            word = word.lower()
+        def clean_word(w: str) -> str:
+            w = w.lower()
             glitches = {
                 "detencin": "detencion",
                 "proteccin": "proteccion",
@@ -822,190 +815,239 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
                 "ventilacin": "ventilacion",
                 "alimentacin": "alimentacion",
             }
-            return glitches.get(word, word)
+            return glitches.get(w, w)
 
-        def reduce_plural(word: str) -> str:
-            if word.endswith("ces"):
-                return word[:-3] + "z"
-            elif word.endswith("es") and len(word) > 4:
-                candidate = word[:-2]
-                if candidate[-1] in "bcdfghjklmnpqrstvwxyz":
-                    return candidate
-            elif word.endswith("s") and len(word) > 3:
-                if not word.endswith("is") and not word.endswith("us"):
-                    return word[:-1]
-            return word
+        def reduce_plural(w: str) -> str:
+            if w.endswith("ces"):
+                return w[:-3] + "z"
+            if w.endswith("es") and len(w) > 4:
+                c = w[:-2]
+                if c[-1] in "bcdfghjklmnpqrstvwxyz":
+                    return c
+            if (
+                w.endswith("s")
+                and len(w) > 3
+                and not w.endswith("is")
+                and not w.endswith("us")
+            ):
+                return w[:-1]
+            return w
 
         from collections import Counter
         import re
 
         all_terms = []
-        analyzed_records = []
+        texts_list = []
 
-        type_col = "Type" if "Type" in data.columns else None
-        mode_col = "mdf"
-
-        for _, row in data.dropna(subset=[comment_col]).iterrows():
+        for _, row in valid_data.iterrows():
             text = str(row[comment_col])
+            texts_list.append(text)
             text_lower = text.lower()
-            if text_lower in ["---", "nan", "none", "null", "no aplica", "n/a"]:
-                continue
-
-            cat = "Others"
-            if any(
-                k in text_lower
-                for k in [
-                    "operacional",
-                    "operación",
-                    "decision",
-                    "decisión",
-                    "operational",
-                    "operation",
-                    "process",
-                    "operator",
-                ]
-            ):
-                cat = "Operational"
-            elif any(
-                k in text_lower
-                for k in [
-                    "limpieza",
-                    "atollo",
-                    "obstrucción",
-                    "obstruido",
-                    "cleaning",
-                    "blockage",
-                    "jam",
-                    "clog",
-                    "obstructed",
-                ]
-            ):
-                cat = "Cleaning/Blockage"
-            elif any(
-                k in text_lower
-                for k in [
-                    "mecánico",
-                    "mecanico",
-                    "perno",
-                    "shaft",
-                    "eje",
-                    "rodamiento",
-                    "bearing",
-                    "correa",
-                    "motor",
-                    "mechanical",
-                    "bolt",
-                    "belt",
-                ]
-            ):
-                cat = "Mechanical"
-            elif any(
-                k in text_lower
-                for k in [
-                    "eléctrico",
-                    "electrico",
-                    "cable",
-                    "bobina",
-                    "fase",
-                    "breaker",
-                    "contacto",
-                    "potencia",
-                    "electrical",
-                    "coil",
-                    "phase",
-                    "contact",
-                    "power",
-                ]
-            ):
-                cat = "Electrical"
-            elif any(
-                k in text_lower
-                for k in [
-                    "falla",
-                    "alarma",
-                    "sensor",
-                    "calibracion",
-                    "calibración",
-                    "instrumentación",
-                    "instrumento",
-                    "failure",
-                    "alarm",
-                    "sensor",
-                    "calibration",
-                    "instrumentation",
-                    "instrument",
-                ]
-            ):
-                cat = "Instrumentation/Failure"
-
-            t_val = str(row[type_col]) if type_col else "Unknown"
-            m_val = str(row[mode_col]) if mode_col in row else "Unknown"
-
-            analyzed_records.append({"category": cat, "type": t_val, "mode": m_val})
-
-            # Words extraction
             words = re.findall(r"\b[a-zA-Záéíóúñ]{3,}\b", text_lower)
-            cleaned_words = []
-
-            for w in words:
-                cleaned = clean_word(w)
-                norm = reduce_plural(cleaned)
-                cleaned_words.append(norm)
-
-            # Extract unigrams
+            cleaned_words = [reduce_plural(clean_word(w)) for w in words]
             for w in cleaned_words:
                 if w not in core_stop_words and w not in generic_words and len(w) > 2:
                     all_terms.append(w)
-
-            # Extract bigrams
             for i in range(len(cleaned_words) - 1):
                 w1, w2 = cleaned_words[i], cleaned_words[i + 1]
-                if w1 not in core_stop_words and w2 not in core_stop_words:
-                    if w1 not in generic_words or w2 not in generic_words:
-                        bigram = f"{w1} {w2}"
-                        all_terms.append(bigram)
+                if (
+                    w1 not in core_stop_words
+                    and w2 not in core_stop_words
+                    and (w1 not in generic_words or w2 not in generic_words)
+                ):
+                    all_terms.append(f"{w1} {w2}")
 
         counter = Counter(all_terms)
         top_keywords = [
             {"word": word, "count": count} for word, count in counter.most_common(15)
         ]
 
-        # Aggregate category details with cross-tabulation metadata
-        categories_details = []
+        type_col = "Type" if "Type" in data.columns else None
+        mode_col = "mdf"
 
-        for cat_name in [
+        final_results = {}
+        target_labels = [
             "Operational",
             "Cleaning/Blockage",
             "Mechanical",
             "Electrical",
             "Instrumentation/Failure",
             "Others",
-        ]:
-            cat_records = [r for r in analyzed_records if r["category"] == cat_name]
-            count = len(cat_records)
+        ]
 
-            top_types = [
-                t for t, _ in Counter([r["type"] for r in cat_records]).most_common(3)
-            ]
-            top_modes = [
-                m for m, _ in Counter([r["mode"] for r in cat_records]).most_common(3)
-            ]
+        for model_name in NLP_MODELS_TO_COMPARE:
+            start_time = time.time()
+            analyzed_records = []
 
-            categories_details.append(
-                {
-                    "category": cat_name,
-                    "count": count,
-                    "top_types": top_types,
-                    "top_modes": top_modes,
-                }
-            )
+            if model_name == "Legacy Keyword NLP":
+                for _, row in valid_data.iterrows():
+                    text_lower = str(row[comment_col]).lower()
+                    cat = "Others"
+                    if any(
+                        k in text_lower
+                        for k in [
+                            "operacional",
+                            "operación",
+                            "decision",
+                            "decisión",
+                            "operational",
+                            "operation",
+                            "process",
+                            "operator",
+                        ]
+                    ):
+                        cat = "Operational"
+                    elif any(
+                        k in text_lower
+                        for k in [
+                            "limpieza",
+                            "atollo",
+                            "obstrucción",
+                            "obstruido",
+                            "cleaning",
+                            "blockage",
+                            "jam",
+                            "clog",
+                            "obstructed",
+                        ]
+                    ):
+                        cat = "Cleaning/Blockage"
+                    elif any(
+                        k in text_lower
+                        for k in [
+                            "mecánico",
+                            "mecanico",
+                            "perno",
+                            "shaft",
+                            "eje",
+                            "rodamiento",
+                            "bearing",
+                            "correa",
+                            "motor",
+                            "mechanical",
+                            "bolt",
+                            "belt",
+                        ]
+                    ):
+                        cat = "Mechanical"
+                    elif any(
+                        k in text_lower
+                        for k in [
+                            "eléctrico",
+                            "electrico",
+                            "cable",
+                            "bobina",
+                            "fase",
+                            "breaker",
+                            "contacto",
+                            "potencia",
+                            "electrical",
+                            "coil",
+                            "phase",
+                            "contact",
+                            "power",
+                        ]
+                    ):
+                        cat = "Electrical"
+                    elif any(
+                        k in text_lower
+                        for k in [
+                            "falla",
+                            "alarma",
+                            "sensor",
+                            "calibracion",
+                            "calibración",
+                            "instrumentación",
+                            "instrumento",
+                            "failure",
+                            "alarm",
+                            "calibration",
+                            "instrumentation",
+                            "instrument",
+                        ]
+                    ):
+                        cat = "Instrumentation/Failure"
+
+                    analyzed_records.append(
+                        {
+                            "category": cat,
+                            "type": str(row.get(type_col, "Unknown")),
+                            "mode": str(row.get(mode_col, "Unknown")),
+                        }
+                    )
+            else:
+                candidate_labels = [
+                    "Operational",
+                    "Cleaning or Blockage",
+                    "Mechanical",
+                    "Electrical",
+                    "Instrumentation or Failure",
+                    "Others",
+                ]
+                try:
+                    predictions = SemanticModelManager.batch_predict(
+                        texts_list, model_name, candidate_labels
+                    )
+                    label_map = {
+                        "Cleaning or Blockage": "Cleaning/Blockage",
+                        "Instrumentation or Failure": "Instrumentation/Failure",
+                    }
+                    for i, (_, row) in enumerate(valid_data.iterrows()):
+                        raw_cat = predictions[i] if i < len(predictions) else "Others"
+                        cat = label_map.get(raw_cat, raw_cat)
+                        if cat not in target_labels:
+                            cat = "Others"
+                        analyzed_records.append(
+                            {
+                                "category": cat,
+                                "type": str(row.get(type_col, "Unknown")),
+                                "mode": str(row.get(mode_col, "Unknown")),
+                            }
+                        )
+                except Exception as ex:
+                    logger.error(f"Error running model {model_name}: {ex}")
+                    for _, row in valid_data.iterrows():
+                        analyzed_records.append(
+                            {
+                                "category": "Others",
+                                "type": str(row.get(type_col, "Unknown")),
+                                "mode": str(row.get(mode_col, "Unknown")),
+                            }
+                        )
+
+            categories_details = []
+            for cat_name in target_labels:
+                cat_records = [r for r in analyzed_records if r["category"] == cat_name]
+                count = len(cat_records)
+                top_types = [
+                    t
+                    for t, _ in Counter([r["type"] for r in cat_records]).most_common(3)
+                ]
+                top_modes = [
+                    m
+                    for m, _ in Counter([r["mode"] for r in cat_records]).most_common(3)
+                ]
+                categories_details.append(
+                    {
+                        "category": cat_name,
+                        "count": count,
+                        "top_types": top_types,
+                        "top_modes": top_modes,
+                    }
+                )
+
+            execution_time = round(time.time() - start_time, 2)
+            final_results[model_name] = {
+                "categories": categories_details,
+                "keywords": top_keywords,
+                "execution_time_seconds": execution_time,
+            }
 
         return {
             "status": "success",
             "coverage": float(coverage),
             "total_comments": int(comments_count),
-            "keywords": top_keywords,
-            "categories": categories_details,
+            "results": final_results,
         }
     except Exception as e:
         logger.error(f"Comment mining error: {str(e)}")

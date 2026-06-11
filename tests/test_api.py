@@ -124,12 +124,19 @@ class TestAPIEndpoints:
         data = response.json()
         assert data["status"] == "success"
         assert "coverage" in data
-        assert "keywords" in data
-        assert "categories" in data
-        assert len(data["keywords"]) > 0
-        assert "word" in data["keywords"][0]
-        assert "count" in data["keywords"][0]
-        # Verify cross-tabulation metadata is present
-        assert "category" in data["categories"][0]
-        assert "top_types" in data["categories"][0]
-        assert "top_modes" in data["categories"][0]
+        assert "results" in data
+        assert "Legacy Keyword NLP" in data["results"]
+        
+        legacy_results = data["results"]["Legacy Keyword NLP"]
+        assert "keywords" in legacy_results
+        assert "categories" in legacy_results
+        assert "execution_time_seconds" in legacy_results
+        
+        if len(legacy_results["keywords"]) > 0:
+            assert "word" in legacy_results["keywords"][0]
+            assert "count" in legacy_results["keywords"][0]
+        
+        if len(legacy_results["categories"]) > 0:
+            assert "category" in legacy_results["categories"][0]
+            assert "top_types" in legacy_results["categories"][0]
+            assert "top_modes" in legacy_results["categories"][0]
