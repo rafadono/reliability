@@ -33,7 +33,7 @@ app = FastAPI(
     description="Backend API for advanced reliability analysis with Pareto and Jackknife",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 app.add_middleware(
@@ -50,18 +50,22 @@ app.include_router(filters.router, prefix="/api")
 app.include_router(analysis.router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
 
+
 @app.get("/health", tags=["System"])
 async def health_check():
     """Health check endpoint."""
     from state import current_data
+
     return {
         "status": "ok",
         "data_loaded": current_data is not None,
-        "api_version": "2.0.0"
+        "api_version": "2.0.0",
     }
+
 
 if __name__ == "__main__":
     import uvicorn
+
     print("Starting Reliability Analysis API...")
     print("Docs available at: http://localhost:8000/docs")
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

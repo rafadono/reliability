@@ -1,13 +1,14 @@
 import numpy as np
 from src.reliability_analysis.analysis.kijima_model import calculate_k2
 
+
 def test_calculate_k2_happy_path():
     """
     Test Kijima 2 virtual age calculation for a sequence of events.
     Verifies that the recursive formula v_i = a * (v_{i-1} + x_i) is followed.
     """
     x = np.array([10.0, 20.0, 30.0])
-    delta = np.array([1, 0, 1]) # Fallo (1), Preventivo (0), Fallo (1)
+    delta = np.array([1, 0, 1])  # Fallo (1), Preventivo (0), Fallo (1)
     ar = 0.5
     ap = 0.1
 
@@ -19,6 +20,7 @@ def test_calculate_k2_happy_path():
     expected = [5.0, 2.5, 16.25]
     result = calculate_k2(x, delta, ar, ap)
     assert list(result) == expected
+
 
 def test_calculate_k2_as_bad_as_old():
     """
@@ -34,6 +36,7 @@ def test_calculate_k2_as_bad_as_old():
     result = calculate_k2(x, delta, ar, ap)
     assert list(result) == expected
 
+
 def test_calculate_k2_as_good_as_new():
     """
     Test 'As-Good-As-New' case where ar=0 and ap=0.
@@ -47,6 +50,7 @@ def test_calculate_k2_as_good_as_new():
     expected = [0.0, 0.0, 0.0]
     result = calculate_k2(x, delta, ar, ap)
     assert list(result) == expected
+
 
 def test_calculate_k2_single_event():
     """

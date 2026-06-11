@@ -15,7 +15,9 @@ DATA_DIR.mkdir(exist_ok=True)
 UPLOADS_DIR.mkdir(exist_ok=True)
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-LOG_FORMAT = os.getenv("LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+LOG_FORMAT = os.getenv(
+    "LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
@@ -33,9 +35,18 @@ CSV_SEPARATOR = ";"
 CSV_DECIMAL = ","
 
 EXCLUDED_MODELS = [
-    "Weibull_2P", "Weibull_CR", "Weibull_Mixture", "Weibull_DS",
-    "Gamma_2P", "Loglogistic_2P", "Gamma_3P", "Lognormal_3P",
-    "Loglogistic_3P", "Gumbel_2P", "Exponential_2P", "Beta_2P"
+    "Weibull_2P",
+    "Weibull_CR",
+    "Weibull_Mixture",
+    "Weibull_DS",
+    "Gamma_2P",
+    "Loglogistic_2P",
+    "Gamma_3P",
+    "Lognormal_3P",
+    "Loglogistic_3P",
+    "Gumbel_2P",
+    "Exponential_2P",
+    "Beta_2P",
 ]
 
 KIJIMA_MODELS = [1, 2]  # Kijima I and II

@@ -14,8 +14,10 @@ def client():
     """Create test client for API."""
     import sys
     from pathlib import Path
-    sys.path.insert(0, str(Path(__file__).parent.parent / 'backend'))
+
+    sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
     from app import app
+
     return TestClient(app)
 
 
@@ -68,10 +70,7 @@ class TestAPIEndpoints:
 
     def test_pareto_analysis(self, client: TestClient):
         """Test Pareto analysis endpoint."""
-        response = client.post(
-            "/api/analysis/pareto",
-            json={"group_by": "equipo"}
-        )
+        response = client.post("/api/analysis/pareto", json={"group_by": "equipo"})
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"
@@ -81,8 +80,7 @@ class TestAPIEndpoints:
     def test_jackknife_analysis(self, client: TestClient):
         """Test Jackknife analysis endpoint."""
         response = client.post(
-            "/api/analysis/jackknife",
-            json={"compare_by": "equipment"}
+            "/api/analysis/jackknife", json={"compare_by": "equipment"}
         )
         assert response.status_code == 200
         data = response.json()
@@ -99,17 +97,16 @@ class TestAPIEndpoints:
 
     def test_cors_headers(self, client: TestClient):
         """Test CORS headers are set."""
-        response = client.get("/api/data/available-filters", headers={"Origin": "http://localhost"})
+        response = client.get(
+            "/api/data/available-filters", headers={"Origin": "http://localhost"}
+        )
         assert response.status_code == 200
         assert "access-control-allow-origin" in response.headers
         assert response.headers["access-control-allow-origin"] == "http://localhost"
 
     def test_kpi_trend_analysis(self, client: TestClient):
         """Test KPI Trend analysis endpoint."""
-        response = client.post(
-            "/api/analysis/kpi-trend",
-            json={}
-        )
+        response = client.post("/api/analysis/kpi-trend", json={})
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"
@@ -122,10 +119,7 @@ class TestAPIEndpoints:
 
     def test_comment_mining_analysis(self, client: TestClient):
         """Test Comment Mining NLP endpoint."""
-        response = client.post(
-            "/api/analysis/comment-mining",
-            json={}
-        )
+        response = client.post("/api/analysis/comment-mining", json={})
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"
@@ -139,4 +133,3 @@ class TestAPIEndpoints:
         assert "category" in data["categories"][0]
         assert "top_types" in data["categories"][0]
         assert "top_modes" in data["categories"][0]
-

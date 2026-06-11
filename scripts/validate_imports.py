@@ -29,9 +29,9 @@ print("\nAttempting to import modules:")
 success_count = 0
 for module_path, *items in try_imports:
     try:
-        module = __import__(module_path, fromlist=[''])
+        module = __import__(module_path, fromlist=[""])
         item_list = items[0] if items else None
-        
+
         if item_list:
             if isinstance(item_list, str) and item_list != "None":
                 getattr(module, item_list)

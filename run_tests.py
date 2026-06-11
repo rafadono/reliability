@@ -9,20 +9,21 @@ Usage:
 
 import subprocess
 import sys
-from pathlib import Path
+
 
 def run_tests(args=None):
     """Run pytest with optional arguments."""
     cmd = ["pytest", "tests/", "-v"]
-    
+
     if args:
         if "--fast" in args:
             cmd.append("-m not slow")
         if "--cov" in args:
             cmd.extend(["--cov=src", "--cov-report=html"])
-    
+
     result = subprocess.run(cmd)
     return result.returncode
+
 
 if __name__ == "__main__":
     returncode = run_tests(sys.argv[1:])
