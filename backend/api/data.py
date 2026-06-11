@@ -46,8 +46,8 @@ async def get_available_filters() -> Dict[str, List[str]]:
     
     try:
         return {
-            "equipment": sorted(state.current_data['Equipo'].unique().tolist()),
-            "types": sorted(state.current_data['Tipo'].unique().tolist()),
+            "equipment": sorted(state.current_data['Equipment'].unique().tolist()),
+            "types": sorted(state.current_data['Type'].unique().tolist()),
             "failure_modes": sorted(state.current_data['mdf'].unique().tolist())
         }
     except Exception as e:

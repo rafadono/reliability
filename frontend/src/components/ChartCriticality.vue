@@ -31,7 +31,7 @@ const quadrantPlugin = {
     
     ctx.save();
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(139, 92, 246, 0.5)'; // Morado semi-transparente
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.5)'; // Semi-transparent purple
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
     

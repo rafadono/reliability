@@ -102,16 +102,16 @@ const createChart = () => {
           callbacks: {
             label: function(context) {
               const raw = context.raw;
-              const start = new Date(raw.x[0]).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-              const end = new Date(raw.x[1]).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+              const start = new Date(raw.x[0]).toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+              const end = new Date(raw.x[1]).toLocaleString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
               const diffHrs = ((raw.x[1] - raw.x[0]) / 3600000).toFixed(2);
               return [
-                `Equipo: ${context.dataset.label}`,
-                `Tipo Falla: ${raw.type}`,
-                `Modo Falla (mdf): ${raw.mode}`,
-                `Duración: ${diffHrs} hrs`,
-                `Inicio: ${start}`,
-                `Fin: ${end}`
+                `Asset: ${context.dataset.label}`,
+                `Failure Type: ${raw.type}`,
+                `Failure Mode (mdf): ${raw.mode}`,
+                `Duration: ${diffHrs} hrs`,
+                `Start: ${start}`,
+                `End: ${end}`
               ];
             }
           }

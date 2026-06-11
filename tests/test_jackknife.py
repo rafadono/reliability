@@ -89,7 +89,7 @@ class TestJackknifeAnalysis:
 
     def test_ci_contains_true_mean(self, small_data):
         """CI should contain the sample mean in most cases."""
-        dias = small_data['Dias'].values.astype(float)
+        dias = small_data['Days'].values.astype(float)
         
         result = calculate_jackknife_ci(dias, confidence=0.95)
         sample_mean = np.mean(dias)

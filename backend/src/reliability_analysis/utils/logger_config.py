@@ -1,5 +1,5 @@
 """
-Sistema de logging centralizado para la aplicación.
+Centralized logging system for the application.
 """
 
 import logging
@@ -10,13 +10,13 @@ from src.reliability_analysis.utils.config import LOG_DIR, LOG_LEVEL, LOG_FORMAT
 
 def setup_logging(name: str = APP_NAME) -> logging.Logger:
     """
-    Configura y retorna un logger con manejo a archivo y consola.
+    Configures and returns a logger with both console and file handlers.
     
     Args:
-        name: Nombre del logger
+        name: Logger name
         
     Returns:
-        logging.Logger: Logger configurado
+        logging.Logger: Configured logger
     """
     logger = logging.getLogger(name)
     

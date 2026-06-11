@@ -22,7 +22,7 @@ const props = defineProps({
 const chartCanvas = ref(null)
 let chartInstance = null
 
-// Plugin personalizado nativo para dibujar las líneas de los promedios
+// Native custom plugin to draw averages lines
 const quadrantPlugin = {
   id: 'quadrant',
   beforeDraw(chart, args, options) {
@@ -32,16 +32,16 @@ const quadrantPlugin = {
     
     ctx.save();
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)'; // Rojo semi-transparente
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)'; // Semi-transparent red
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
     
-    // Línea vertical
+    // Vertical line
     if (avgX >= left && avgX <= right) {
       ctx.moveTo(avgX, top);
       ctx.lineTo(avgX, bottom);
     }
-    // Línea horizontal
+    // Horizontal line
     if (avgY >= top && avgY <= bottom) {
       ctx.moveTo(left, avgY);
       ctx.lineTo(right, avgY);

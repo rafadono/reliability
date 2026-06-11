@@ -5,178 +5,138 @@ Modern, fast reliability engineering analysis platform built with Vue 3 and Fast
 ## Features
 
 - **Independent Modular Filtering**: Each chart/module features its own independent filter options (equipment → type → failure mode cascade), allowing users to analyze and compare different assets and analysis types side-by-side.
-- **Pareto Analysis**: 80/20 split analysis at equipment, type, and failure mode levels
-- **Maintenance Jackknife**: Frequency vs Total Downtime scatter plots to identify acute vs chronic issues
-- **Criticality Matrix**: Dynamic risk matrix plotting failure probability vs average downtime (MTTR)
-- **Weibull & Proactive Analysis**: Fitting, Optimal PM Interval, and Conditional Reliability
-- **APM Metrics**: Bad actors ranking (MTBF, MTTR, Availability) and Reliability Growth (Crow-AMSAA)
-- **Event Plot Timeline**: Visual failure tracking across assets over time
-- **Interactive Dashboard**: Real-time charts and metrics
-- **Maintainability Analysis**: Switch seamlessly between Time Between Failures (TBX) and Repair Times (TTX)
-- **Report Export**: Download full interactive dashboards as high-quality A3 PDF reports
-- **REST API**: Full-featured API with automatic documentation
-
-## Quick Start
-
-### Prerequisites
-- Docker & Docker Compose (recommended)
-- OR: Python 3.12+, Node.js 20+
-
-### Option 1: Docker (Recommended - Simplest)
-
-```bash
-docker-compose up --build
-```
-
-**Wait for services to start (about 30 seconds), then open:**
-
-### http://localhost:5173
-
-That's it! You should see the Reliability Analysis dashboard.
+- **Pareto Analysis**: 80/20 split analysis at equipment, type, and failure mode levels.
+- **Maintenance Jackknife**: Frequency vs Total Downtime scatter plots to identify acute vs chronic issues.
+- **Criticality Matrix**: Dynamic risk matrix plotting failure probability vs average downtime (MTTR).
+- **Weibull & Proactive Analysis**: Fitting, Optimal PM Interval, and Conditional Reliability.
+- **APM Metrics**: Bad actors ranking (MTBF, MTTR, Availability) and Reliability Growth (Crow-AMSAA).
+- **Event Plot Timeline**: Visual failure tracking across assets over time.
+- **Interactive Dashboard**: Real-time charts and metrics.
+- **Maintainability Analysis**: Switch seamlessly between Time Between Failures (TBX) and Repair Times (TTX).
+- **Report Export**: Download full interactive dashboards as high-quality A3 PDF reports.
+- **REST API**: Full-featured API with automatic documentation.
 
 ---
 
-**Optional - API Documentation:**
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+## Quick Start (with Docker - Recommended)
 
-### Option 2: Local Development
+The simplest way to run the entire stack is using Docker Compose:
 
-**Backend:**
+### 1. Build and Start the Stack
+```bash
+# Clean up any existing containers first
+docker-compose down
+
+# Build and start the services
+docker-compose up --build
+```
+
+### 2. Access the Application
+* **Frontend Dashboard**: http://localhost:5173
+* **FastAPI Interactive Docs (Swagger)**: http://localhost:8000/docs
+* **FastAPI Alternative Docs (ReDoc)**: http://localhost:8000/redoc
+
+---
+
+## Option 2: Local Development Setup
+
+If running locally without Docker:
+
+### Backend Setup
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn app:app --reload
 ```
 
-**Frontend:**
+### Frontend Setup
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-## Project Structure
+---
 
+## Debugging and Logs (Docker)
+
+If you need to inspect the status or debug issues:
+
+```bash
+# View backend service logs
+docker-compose logs backend
+
+# View frontend service logs  
+docker-compose logs frontend
+
+# Follow both logs in real time
+docker-compose logs -f
+
+# Stop and clean up all containers
+docker-compose down
 ```
-reliability/
-├── backend/           # FastAPI application
-│   ├── app.py        # Main API server
-│   ├── src/reliability_analysis/
-│   │   ├── core/     # Core analysis modules
-│   │   ├── analysis/ # Pareto, Jackknife
 
-│   │   └── utils/    # Helpers and configuration
-│   └── requirements.txt
-├── frontend/         # Vue 3 application
-│   ├── src/
-│   ├── package.json
-│   └── Dockerfile
-├── tests/           # Unit tests
-├── docker-compose.yml
-└── Dockerfile
-```
+### Common Troubleshooting:
+* **Port 5173 is busy**: Vite will automatically try the next port (e.g. `5174`). Check frontend logs to confirm the port.
+* **Backend not responding**: Wait 10–15 seconds after starting the container for all Python and C++ package initializations to complete.
+* **Clean rebuild**: If experiencing caching issues with Node.js modules or packages:
+  ```bash
+  docker-compose build --no-cache
+  docker-compose up
+  ```
 
-## API Endpoints
-
-- `POST /api/upload` - Upload CSV data
-- `GET /api/filters` - Get available filters
-- `POST /api/analysis/pareto` - Pareto analysis
-- `POST /api/analysis/jackknife` - Jackknife CI calculation
-- `GET /api/analysis/summary` - Summary statistics
-
-Full API documentation: http://localhost:8000/docs (when running)
+---
 
 ## Data Format
 
-Upload CSV files with these columns:
+The platform supports semicolon-separated CSV files (`;`) and automatically handles **both English and Spanish headers**.
 
+Example format:
 ```csv
-Fecha,Hora,Equipo,Tipo,Modo de Falla,Duracion
-01/01/2024,08:00:00,Motor A,Mechanical,Bearing,2.5
-15/01/2024,14:30:00,Pump B,Hydraulic,Seal,4.0
+Equipment;Type;mdf;TTX;Censored;Date;Comment
+Motor A;Mechanical;Bearing;100;0;01/01/2026;Mechanical failure of bearing due to wear
+Pump B;Hydraulic;Seal;120;1;01/02/2026;Operational decision failure
 ```
 
-- **Equipo**: Equipment identifier
-- **Tipo**: Failure type classification
-- **Mdf**: Failure mode (specific failure mechanism)
-- **Dias**: Days to failure (numeric)
-- **Censurado**: Censoring flag (0=complete, 1=censored)
+### Supported Columns and Spanish Auto-Mappings:
+- **Equipment** (or `Equipo`): Asset identifier.
+- **Type** (or `Tipo`): Failure classification.
+- **mdf** (or `Modo de Falla`, `failure mode`): Specific failure mechanism.
+- **TTX** (or `Duracion`, `duración`, `duration`, `downtime`): Repair or downtime duration (hours).
+- **Censored** (or `Censurado`): Censoring indicator (`0` for failure event, `1` for censored/operational stop).
+- **Date** (or `Fecha`): Start date of the event (`dd/mm/yyyy` format).
+- **Time** (or `Hora`): Optional start time of the event (`hh:mm:ss`).
+- **Comment** (or `Comentario`): Event descriptions used for NLP text mining analysis.
+- **Days** (or `Dias`, `días`): Alternate column for days to failure (if TTX is not present).
 
-## Development
-
-### Running Tests
-
-```bash
-pytest tests/
-```
-
-### Building Production Images
-
-```bash
-docker-compose build
-```
-
-### Environment Variables
-
-Create `.env` (optional):
-
-```
-VITE_API_URL=http://backend:8000
-PYTHONUNBUFFERED=1
-```
+---
 
 ## Technical Stack
 
 **Backend:**
 - FastAPI - Async Python web framework
-- Pandas - Data analysis
-- NumPy - Numerical computing
-- Uvicorn - ASGI server
+- Pandas & NumPy - Data analysis and structures
+- SciPy - Parametric fitting optimization
+- reliability - Reliability engineering calculations
 
 **Frontend:**
-- Vue 3 - Reactive UI framework
-- Vite - Fast build tool
-- Tailwind CSS - Utility-first styling
-- Chart.js - Interactive charts
-
-## Performance Notes
-
-- Dockerized setup uses `uv` for fast dependency installation
-- Multi-stage Docker builds minimize image size
-- Jackknife CI uses Leave-One-Out resampling (O(n²) complexity)
-- API endpoints cached where applicable
-
-## Troubleshooting
-
-**Port 8000 already in use:**
-```bash
-docker-compose down
-docker-compose up --build
-```
-
-**Node modules issues:**
-```bash
-cd frontend
-rm -rf node_modules package-lock.json
-npm install
-```
-
-**API not responding:**
-Check backend logs: `docker-compose logs backend`
-
-## Contributing
-
-This project follows industry standard practices:
-- Python code follows PEP 8
-- Vue components follow Composition API patterns
-- Tests required for new analysis features
-- Docker builds are multi-stage for optimization
-
-## License
-
-MIT License - See LICENSE file for details
+- Vue 3 - Reactive user interface (Composition API)
+- Vite - Production build tool
+- Chart.js & vue-chartjs - Canvas charts
+- Tailwind CSS - Component styling
 
 ---
 
-**Need Help?** Check the API documentation at http://localhost:8000/docs after starting the service.
+## Development & Verification
+
+### Running Tests
+Ensure all backend assertions are passing:
+```bash
+pytest tests/
+```
+
+### Formatting and Linting
+The codebase is structured around PEP 8 styles using Ruff:
+```bash
+ruff check .
+```

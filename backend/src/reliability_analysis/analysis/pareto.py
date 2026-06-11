@@ -23,7 +23,7 @@ class ParetoAnalyzer:
     @staticmethod
     def analyze_by_equipment(
         df: pd.DataFrame,
-        failure_column: str = "Equipo"
+        failure_column: str = "Equipment"
     ) -> Dict[str, any]:
         """
         Pareto analysis by equipment.
@@ -58,8 +58,8 @@ class ParetoAnalyzer:
     def analyze_by_type(
         df: pd.DataFrame,
         equipment: Optional[str] = None,
-        type_column: str = "Tipo",
-        equipment_column: str = "Equipo"
+        type_column: str = "Type",
+        equipment_column: str = "Equipment"
     ) -> Dict[str, any]:
         """
         Pareto analysis by type (respects equipment filter).
@@ -99,8 +99,8 @@ class ParetoAnalyzer:
         equipment: Optional[str] = None,
         failure_type: Optional[str] = None,
         mode_column: str = "mdf",
-        equipment_column: str = "Equipo",
-        type_column: str = "Tipo"
+        equipment_column: str = "Equipment",
+        type_column: str = "Type"
     ) -> Dict[str, any]:
         """
         Pareto analysis by failure mode (respects equipment + type filters).
@@ -169,7 +169,7 @@ class ParetoAnalyzer:
 
 
 # Module level functions for test compatibility (returning list of dicts)
-def analyze_by_equipment(df, failure_column="Equipo"):
+def analyze_by_equipment(df, failure_column="Equipment"):
     value_counts = df[failure_column].value_counts().sort_values(ascending=False)
     total = value_counts.sum()
     if total == 0:
@@ -185,7 +185,7 @@ def analyze_by_equipment(df, failure_column="Equipo"):
         for name, count, pct in zip(value_counts.index, value_counts.values, cumsum_pct.values)
     ]
 
-def analyze_by_type(df, equipment=None, type_column="Tipo", equipment_column="Equipo"):
+def analyze_by_type(df, equipment=None, type_column="Type", equipment_column="Equipment"):
     if equipment:
         df = df[df[equipment_column] == equipment]
     if df.empty:
@@ -205,7 +205,7 @@ def analyze_by_type(df, equipment=None, type_column="Tipo", equipment_column="Eq
         for name, count, pct in zip(value_counts.index, value_counts.values, cumsum_pct.values)
     ]
 
-def analyze_by_failure_mode(df, equipment=None, failure_type=None, mode_column="mdf", equipment_column="Equipo", type_column="Tipo"):
+def analyze_by_failure_mode(df, equipment=None, failure_type=None, mode_column="mdf", equipment_column="Equipment", type_column="Type"):
     if equipment:
         df = df[df[equipment_column] == equipment]
     if failure_type:

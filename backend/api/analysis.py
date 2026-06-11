@@ -33,9 +33,9 @@ async def pareto_analysis(req: ParetoRequest) -> Dict[str, Any]:
         if data.empty:
             return {"status": "warning", "message": "No data matches current filters", "pareto": None}
         
-        if req.group_by.lower() == 'equipo':
+        if req.group_by.lower() in ('equipo', 'equipment'):
             result = ParetoAnalyzer.analyze_by_equipment(data)
-        elif req.group_by.lower() == 'tipo':
+        elif req.group_by.lower() in ('tipo', 'type'):
             result = ParetoAnalyzer.analyze_by_type(data, equipment=eq)
         elif req.group_by.lower() == 'mdf':
             result = ParetoAnalyzer.analyze_by_failure_mode(data, equipment=eq, failure_type=ft)
@@ -63,22 +63,22 @@ async def jackknife_analysis(req: AnalysisRequest) -> Dict[str, Any]:
         data = state.filter_manager.get_filtered_data()
         
         if req.types_to_use:
-            data = data[data['Tipo'].isin(req.types_to_use)]
+            data = data[data['Type'].isin(req.types_to_use)]
         
         if data.empty:
             raise HTTPException(status_code=400, detail="Filtered data is empty")
 
         if req.compare_by == 'equipment':
-            group_col = 'Equipo'
+            group_col = 'Equipment'
         elif req.compare_by == 'type':
-            group_col = 'Tipo'
+            group_col = 'Type'
         elif req.compare_by == 'mode':
             group_col = 'mdf'
         else:
-            group_col = 'Equipo'
+            group_col = 'Equipment'
             
         if group_col not in data.columns:
-            group_col = 'Equipo'
+            group_col = 'Equipment'
 
         stats = data.groupby(group_col).agg(
             failures=(group_col, 'count'),
@@ -119,7 +119,7 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
         data = state.filter_manager.get_filtered_data()
         
         if req.types_to_fit:
-            data = data[data['Tipo'].isin(req.types_to_fit)]
+            data = data[data['Type'].isin(req.types_to_fit)]
             
         if data.empty:
             return {"status": "error", "message": "Filtered data is empty", "parameters": None}
@@ -127,10 +127,10 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
         fit_data = data.copy()
         target_col = req.target_column or 'TBX'
         
-        if target_col == 'TTX' and 'Duracion' in fit_data.columns and 'TTX' not in fit_data.columns:
-            target_col = 'Duracion'
-        elif target_col == 'TBX' and 'Dias' in fit_data.columns and 'TBX' not in fit_data.columns:
-            target_col = 'Dias'
+        if target_col == 'TTX' and 'TTX' not in fit_data.columns:
+            fit_data['TTX'] = 0.0
+        elif target_col == 'TBX' and 'Days' in fit_data.columns and 'TBX' not in fit_data.columns:
+            target_col = 'Days'
             
         if target_col in fit_data.columns and target_col != 'TBX':
             fit_data['TBX'] = fit_data[target_col]
@@ -182,10 +182,10 @@ async def bad_actors_analysis(req: AnalysisRequest) -> Dict[str, Any]:
         if data.empty:
             return {"status": "warning", "bad_actors": []}
             
-        group_col = 'Equipo' if req.compare_by == 'equipment' else 'Tipo'
+        group_col = 'Equipment' if req.compare_by == 'equipment' else 'Type'
         
-        uptime_col = 'TBX' if 'TBX' in data.columns else ('Dias' if 'Dias' in data.columns else None)
-        downtime_col = 'TTX' if 'TTX' in data.columns else ('Duracion' if 'Duracion' in data.columns else None)
+        uptime_col = 'TBX' if 'TBX' in data.columns else ('Days' if 'Days' in data.columns else None)
+        downtime_col = 'TTX' if 'TTX' in data.columns else None
         
         stats = []
         for name, group in data.groupby(group_col):
@@ -218,13 +218,13 @@ async def reliability_growth(req: AnalysisRequest) -> Dict[str, Any]:
         if data.empty:
             return {"status": "warning", "cumulative_time": [], "cumulative_failures": []}
             
-        if 'Fecha_Inicio' in data.columns:
-            data = data.sort_values('Fecha_Inicio')
+        if 'Start_Date' in data.columns:
+            data = data.sort_values('Start_Date')
             
         if 'TBX' in data.columns:
             uptime_col = 'TBX'
-        elif 'Dias' in data.columns:
-            uptime_col = 'Dias'
+        elif 'Days' in data.columns:
+            uptime_col = 'Days'
         else:
             uptime_col = 'TTX' if 'TTX' in data.columns else None
         
@@ -243,35 +243,35 @@ async def event_plot(req: AnalysisRequest) -> Dict[str, Any]:
     
     try:
         data = state.filter_manager.get_filtered_data()
-        if 'Fecha_Inicio' not in data.columns:
-            raise HTTPException(status_code=400, detail="Dataset must contain 'Fecha_Inicio' column.")
+        if 'Start_Date' not in data.columns:
+            raise HTTPException(status_code=400, detail="Dataset must contain 'Start_Date' column.")
         
         if data.empty:
             return {"status": "success", "events": {}, "min_date": None, "max_date": None}
             
-        data['Fecha_Inicio'] = pd.to_datetime(data['Fecha_Inicio'])
-        min_val = data['Fecha_Inicio'].min()
+        data['Start_Date'] = pd.to_datetime(data['Start_Date'])
+        min_val = data['Start_Date'].min()
         min_date = min_val.strftime('%Y-%m-%d') if pd.notnull(min_val) else None
         
-        if 'Fecha_Fin' in data.columns:
-            data['Fecha_Fin'] = pd.to_datetime(data['Fecha_Fin'])
-            max_val = data['Fecha_Fin'].max()
+        if 'End_Date' in data.columns:
+            data['End_Date'] = pd.to_datetime(data['End_Date'])
+            max_val = data['End_Date'].max()
             max_date = max_val.strftime('%Y-%m-%d') if pd.notnull(max_val) else None
         else:
-            data['Fecha_Fin'] = data['Fecha_Inicio']
-            max_val = data['Fecha_Inicio'].max()
+            data['End_Date'] = data['Start_Date']
+            max_val = data['Start_Date'].max()
             max_date = max_val.strftime('%Y-%m-%d') if pd.notnull(max_val) else None
             
         event_data = {}
-        for name, group in data.groupby('Equipo'):
+        for name, group in data.groupby('Equipment'):
             event_list = []
             for _, row in group.iterrows():
-                if pd.notnull(row['Fecha_Inicio']):
-                    start_str = row['Fecha_Inicio'].strftime('%Y-%m-%dT%H:%M:%S')
-                    end_val = row['Fecha_Fin'] if pd.notnull(row['Fecha_Fin']) else row['Fecha_Inicio']
+                if pd.notnull(row['Start_Date']):
+                    start_str = row['Start_Date'].strftime('%Y-%m-%dT%H:%M:%S')
+                    end_val = row['End_Date'] if pd.notnull(row['End_Date']) else row['Start_Date']
                     end_str = end_val.strftime('%Y-%m-%dT%H:%M:%S')
                     mode_val = str(row['mdf']) if 'mdf' in row else "Unknown"
-                    type_val = str(row['Tipo']) if 'Tipo' in row else "Unknown"
+                    type_val = str(row['Type']) if 'Type' in row else "Unknown"
                     event_list.append({
                         "start": start_str,
                         "end": end_str,
@@ -373,15 +373,15 @@ async def kpi_trend(req: AnalysisRequest) -> Dict[str, Any]:
         if data.empty:
             return {"status": "success", "trend": []}
             
-        if 'Fecha_Inicio' not in data.columns:
-            raise HTTPException(status_code=400, detail="Dataset must contain datetime start column (Fecha_Inicio).")
+        if 'Start_Date' not in data.columns:
+            raise HTTPException(status_code=400, detail="Dataset must contain datetime start column (Start_Date).")
             
         df = data.copy()
-        df = df.dropna(subset=['Fecha_Inicio'])
+        df = df.dropna(subset=['Start_Date'])
         if df.empty:
             return {"status": "success", "trend": []}
             
-        df['month_period'] = df['Fecha_Inicio'].dt.to_period('M')
+        df['month_period'] = df['Start_Date'].dt.to_period('M')
         
         grouped = df.groupby('month_period')
         trend_data = []
@@ -429,12 +429,12 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
             
         comment_col = None
         for col in data.columns:
-            if col.lower() == 'comentario':
+            if col.lower() in ('comentario', 'comment'):
                 comment_col = col
                 break
                 
         if not comment_col:
-            return {"status": "warning", "message": "No 'Comentario' column found in dataset", "keywords": [], "categories": []}
+            return {"status": "warning", "message": "No comment column found in dataset", "keywords": [], "categories": []}
             
         comments = data[comment_col].dropna().astype(str)
         comments = comments[~comments.str.lower().isin(['---', 'nan', 'none', 'null', 'no aplica', 'n/a'])]
@@ -446,14 +446,18 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
         if comments.empty:
             return {"status": "success", "keywords": [], "categories": [], "coverage": 0.0, "total_comments": 0}
             
-        # Core stop words (prepositions, pronouns, filler words)
+        # Core stop words in both English and Spanish
         core_stop_words = {
             'de', 'la', 'el', 'y', 'en', 'por', 'que', 'para', 'un', 'una', 'con', 'se', 'no', 'del', 'al', 'lo', 
             'los', 'las', 'es', 'su', 'sus', 'como', 'más', 'mas', 'o', 'pero', 'este', 'esta', 'ha', 'debido', 
             'realiza', 'presenta', 'genera', 'causa', 'además', 'ademas', 'sobre', 'entre', 'otro', 'otra', 
             'otros', 'otras', 'caso', 'hace', 'hecho', 'estos', 'estas', 'sino', 'toda', 'todo', 'todos', 
             'todas', 'donde', 'desde', 'hasta', 'cuando', 'quien', 'cual', 'cuales', 'muy', 'sólo', 'solo',
-            'cada', 'bien', 'también', 'tambien', 'tampoco', 'después', 'despues', 'antes', 'ahora'
+            'cada', 'bien', 'también', 'tambien', 'tampoco', 'después', 'despues', 'antes', 'ahora',
+            'the', 'of', 'and', 'to', 'in', 'is', 'you', 'that', 'it', 'he', 'was', 'for', 'on', 'are', 'as', 
+            'with', 'his', 'they', 'i', 'at', 'be', 'this', 'have', 'from', 'or', 'one', 'had', 'by', 'but', 
+            'not', 'what', 'all', 'were', 'we', 'when', 'your', 'can', 'said', 'there', 'use', 'an', 'each', 
+            'which', 'she', 'do', 'how', 'their', 'if', 'will', 'up', 'other', 'about', 'out', 'many', 'then'
         }
         
         # Generic terms we want to exclude from standalone keywords or joint bigrams (uninformative)
@@ -466,12 +470,15 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
             'observación', 'observaciones', 'trabajo', 'trabajos', 'personal', 'inspección', 'inspeccion', 
             'revisión', 'revision', 'registro', 'registros', 'código', 'codigo', 'estado', 'estados', 
             'actividad', 'actividades', 'inicio', 'fin', 'espera', 'esperas', 'valor', 'valores',
-            'equipo', 'equipos', 'problema', 'problemas', 'evento', 'eventos', 'motivo', 'motivos'
+            'equipo', 'equipos', 'problema', 'problemas', 'evento', 'eventos', 'motivo', 'motivos',
+            'failure', 'failures', 'stop', 'stops', 'stopped', 'system', 'systems', 'downtime', 
+            'uptime', 'running', 'code', 'codes', 'activity', 'activities', 'waiting', 'process',
+            'operational', 'operation', 'operations', 'area', 'shift', 'shifts', 'operator', 
+            'report', 'reports', 'observation', 'observations', 'inspection', 'inspections'
         }
 
         def clean_word(word: str) -> str:
             word = word.lower()
-            # Resolve common encoding glitches/truncations
             glitches = {
                 'detencin': 'detencion',
                 'proteccin': 'proteccion',
@@ -505,9 +512,8 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
         all_terms = []
         analyzed_records = []
         
-        # Determine structured columns
-        type_col = 'Tipo' if 'Tipo' in data.columns else None
-        mode_col = 'mdf' if 'mdf' in data.columns else ('Modo de Falla' if 'Modo de Falla' in data.columns else None)
+        type_col = 'Type' if 'Type' in data.columns else None
+        mode_col = 'mdf'
         
         for _, row in data.dropna(subset=[comment_col]).iterrows():
             text = str(row[comment_col])
@@ -515,20 +521,20 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
             if text_lower in ['---', 'nan', 'none', 'null', 'no aplica', 'n/a']:
                 continue
                 
-            cat = "Otros"
-            if any(k in text_lower for k in ["operacional", "operación", "decision", "decisión"]):
-                cat = "Operacional"
-            elif any(k in text_lower for k in ["limpieza", "atollo", "obstrucción", "obstruido"]):
-                cat = "Limpieza/Atollo"
-            elif any(k in text_lower for k in ["mecánico", "mecanico", "perno", "shaft", "eje", "rodamiento", "bearing", "correa", "motor"]):
-                cat = "Mecánico"
-            elif any(k in text_lower for k in ["eléctrico", "electrico", "cable", "bobina", "fase", "breaker", "contacto", "potencia"]):
-                cat = "Eléctrico"
-            elif any(k in text_lower for k in ["falla", "alarma", "sensor", "calibracion", "calibración", "instrumentación", "instrumento"]):
-                cat = "Instrumentación/Falla"
+            cat = "Others"
+            if any(k in text_lower for k in ["operacional", "operación", "decision", "decisión", "operational", "operation", "process", "operator"]):
+                cat = "Operational"
+            elif any(k in text_lower for k in ["limpieza", "atollo", "obstrucción", "obstruido", "cleaning", "blockage", "jam", "clog", "obstructed"]):
+                cat = "Cleaning/Blockage"
+            elif any(k in text_lower for k in ["mecánico", "mecanico", "perno", "shaft", "eje", "rodamiento", "bearing", "correa", "motor", "mechanical", "bolt", "belt"]):
+                cat = "Mechanical"
+            elif any(k in text_lower for k in ["eléctrico", "electrico", "cable", "bobina", "fase", "breaker", "contacto", "potencia", "electrical", "coil", "phase", "contact", "power"]):
+                cat = "Electrical"
+            elif any(k in text_lower for k in ["falla", "alarma", "sensor", "calibracion", "calibración", "instrumentación", "instrumento", "failure", "alarm", "sensor", "calibration", "instrumentation", "instrument"]):
+                cat = "Instrumentation/Failure"
                 
             t_val = str(row[type_col]) if type_col else "Unknown"
-            m_val = str(row[mode_col]) if mode_col else "Unknown"
+            m_val = str(row[mode_col]) if mode_col in row else "Unknown"
             
             analyzed_records.append({
                 "category": cat,
@@ -550,14 +556,11 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
                 if w not in core_stop_words and w not in generic_words and len(w) > 2:
                     all_terms.append(w)
                     
-            # Extract bigrams (consecutive word pairs)
+            # Extract bigrams
             for i in range(len(cleaned_words) - 1):
                 w1, w2 = cleaned_words[i], cleaned_words[i+1]
-                # Neither can be in core stop words
                 if w1 not in core_stop_words and w2 not in core_stop_words:
-                    # At least one must be a highly descriptive/technical word (not generic)
                     if w1 not in generic_words or w2 not in generic_words:
-                        # Exclude joint generic bigrams like "decision operacional"
                         bigram = f"{w1} {w2}"
                         all_terms.append(bigram)
             
@@ -565,14 +568,12 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
         top_keywords = [{"word": word, "count": count} for word, count in counter.most_common(15)]
         
         # Aggregate category details with cross-tabulation metadata
-        cat_counts = Counter([r["category"] for r in analyzed_records])
         categories_details = []
         
-        for cat_name in ["Operacional", "Limpieza/Atollo", "Mecánico", "Eléctrico", "Instrumentación/Falla", "Otros"]:
+        for cat_name in ["Operational", "Cleaning/Blockage", "Mechanical", "Electrical", "Instrumentation/Failure", "Others"]:
             cat_records = [r for r in analyzed_records if r["category"] == cat_name]
             count = len(cat_records)
             
-            # Cross-tabulate with types and modes
             top_types = [t for t, _ in Counter([r["type"] for r in cat_records]).most_common(3)]
             top_modes = [m for m, _ in Counter([r["mode"] for r in cat_records]).most_common(3)]
             

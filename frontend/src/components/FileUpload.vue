@@ -40,7 +40,7 @@
           <strong>File:</strong> {{ selectedFile.name }}
         </p>
         <div v-if="isLoading" class="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium text-center flex items-center justify-center gap-2">
-          <span class="inline-block animate-pulse">⏳</span> Uploading...
+          Uploading...
         </div>
       </div>
 

@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 """
-Script para validar que los imports funcionan correctamente después de la migración.
+Script to validate that imports work correctly after migration.
 """
 
 import sys
 from pathlib import Path
 
-# Agregar backend/ y backend/src/ al path
+# Add backend/ and backend/src/ to system path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "backend"))
 sys.path.insert(0, str(project_root / "backend" / "src"))
 
 print("=" * 70)
-print("VALIDACION DE IMPORTS")
+print("IMPORT VALIDATION")
 print("=" * 70)
 
 try_imports = [
     ("reliability_analysis.core.filters", "FilterManager"),
     ("reliability_analysis.core.data_processing", "DataProcessor"),
-    ("reliability_analysis.analysis.models", ["ReliabilityFitter", "KijimaMontecarlo"]),
+    ("reliability_analysis.analysis.models", ["ReliabilityFitter", "KijimaFitter"]),
     ("reliability_analysis.analysis.metrics", ["calculate_aic_bic"]),
     ("reliability_analysis.analysis.kijima_model", "calculate_k2"),
     ("reliability_analysis.utils.config", "EXCLUDED_MODELS"),
     ("reliability_analysis.utils.logger_config", "setup_logging"),
 ]
 
-print("\nIntentando importar modulos:")
+print("\nAttempting to import modules:")
 success_count = 0
 for module_path, *items in try_imports:
     try:
@@ -52,12 +52,12 @@ for module_path, *items in try_imports:
         print(f"  [FAIL] {module_path}: {str(e)[:60]}")
 
 print("\n" + "=" * 70)
-print(f"Resultado: {success_count} modulos importados exitosamente")
+print(f"Result: {success_count} modules successfully imported")
 print("=" * 70)
 
 if success_count == len(try_imports):
-    print("\nTodos los imports funcionan correctamente!")
+    print("\nAll imports function correctly!")
     sys.exit(0)
 else:
-    print(f"\nAlerta: {len(try_imports) - success_count} imports fallaron")
+    print(f"\nAlert: {len(try_imports) - success_count} imports failed")
     sys.exit(1)

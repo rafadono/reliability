@@ -1,7 +1,7 @@
 """
-Configuración centralizada de la aplicación.
+Centralized application configuration.
 
-Utiliza variables de entorno con valores por defecto.
+Uses environment variables with default values.
 """
 
 import os
@@ -38,7 +38,7 @@ EXCLUDED_MODELS = [
     "Loglogistic_3P", "Gumbel_2P", "Exponential_2P", "Beta_2P"
 ]
 
-KIJIMA_MODELS = [1, 2]  # Kijima I y II
+KIJIMA_MODELS = [1, 2]  # Kijima I and II
 
 PLOT_WIDTH = 1000
 PLOT_HEIGHT = 600

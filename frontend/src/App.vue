@@ -16,13 +16,13 @@
         <div class="flex items-center gap-4 text-sm">
           <button 
             @click="toggleDarkMode" 
-            class="p-2 text-gray-500 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-lg"
+            class="p-2 text-gray-500 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-xs font-semibold uppercase tracking-wider"
             :title="isDarkMode ? 'Light Mode' : 'Dark Mode'"
           >
-            {{ isDarkMode ? '☀️' : '🌙' }}
+            {{ isDarkMode ? 'Light' : 'Dark' }}
           </button>
           <a href="http://localhost:8000/docs" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1 transition-colors">
-            <span>📚</span> API Swagger
+            API Swagger
           </a>
           <div class="text-gray-600 dark:text-slate-400 border-l border-gray-300 dark:border-slate-600 pl-4">v1.0</div>
         </div>
@@ -91,7 +91,7 @@ const toggleDarkMode = () => {
 
 const handleFileUploaded = () => {
   dataLoaded.value = true
-  showNotification('Archivo cargado exitosamente')
+  showNotification('File uploaded successfully')
 }
 
 const handleFiltersChanged = () => {
@@ -103,12 +103,12 @@ const handleSidebarUpload = async (file) => {
   try {
     const response = await apiService.upload(file)
     if (response.data.status === 'success') {
-      showNotification('Nuevo archivo cargado exitosamente')
+      showNotification('New file uploaded successfully')
       dashboardKey.value += 1
     }
   } catch (error) {
     console.error('Error uploading file:', error)
-    showNotification('Error al cargar archivo')
+    showNotification('Error uploading file')
   } finally {
     isLoading.value = false
   }
@@ -118,7 +118,7 @@ const handleReset = async () => {
   isLoading.value = true
   try {
     await apiService.resetFilters()
-    showNotification('Filtros reiniciados')
+    showNotification('Filters reset')
     dashboardKey.value += 1
   } catch (error) {
     console.error('Error resetting filters:', error)
@@ -128,7 +128,7 @@ const handleReset = async () => {
 }
 
 const handleExportPDF = () => {
-  showNotification('Generando PDF, por favor espera...')
+  showNotification('Generating PDF, please wait...')
   const element = document.getElementById('dashboard-content')
   
   const opt = {
@@ -141,10 +141,10 @@ const handleExportPDF = () => {
   }
   
   html2pdf().set(opt).from(element).save().then(() => {
-    showNotification('PDF descargado exitosamente')
+    showNotification('PDF downloaded successfully')
   }).catch(err => {
     console.error('Error exporting PDF:', err)
-    showNotification('Error al generar el PDF')
+    showNotification('Error generating PDF')
   })
 }
 

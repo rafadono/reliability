@@ -23,8 +23,8 @@ from api import data, filters, analysis, stats
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Silenciar los logs de inicialización repetitivos para evitar spam en consola
-# (especialmente útil durante las miles de iteraciones de Jackknife)
+# Silence repetitive initialization logs to avoid console spam
+# (especially useful during thousands of Jackknife iterations)
 logging.getLogger("Models").setLevel(logging.WARNING)
 logging.getLogger("FilterManager").propagate = False
 

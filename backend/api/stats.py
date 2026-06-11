@@ -24,8 +24,8 @@ async def get_summary_stats() -> Dict[str, Any]:
         return {
             "status": "success",
             "total_records": int(len(data)),
-            "unique_equipment": int(data['Equipo'].nunique()),
-            "unique_types": int(data['Tipo'].nunique()),
+            "unique_equipment": int(data['Equipment'].nunique()),
+            "unique_types": int(data['Type'].nunique()),
             "unique_modes": int(data['mdf'].nunique()),
             "ttx_min": float(data['TTX'].min()),
             "ttx_max": float(data['TTX'].max()),

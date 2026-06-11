@@ -20,7 +20,7 @@ def calculate_k2(x: np.ndarray, delta: np.ndarray, ar: float, ap: float) -> np.n
     return V
 
 def calculate_virtual_age(x: np.ndarray, delta: np.ndarray, ar: float, ap: float, model_type: int) -> np.ndarray:
-    """Calcula edad virtual según modelo Kijima I o II"""
+    """Calculate virtual age for Kijima I or II model."""
     x = np.asarray(x, float)
     delta = np.asarray(delta, float)
     model = int(model_type[0]) if isinstance(model_type, (list, tuple)) else int(model_type)
@@ -33,23 +33,23 @@ def calculate_virtual_age(x: np.ndarray, delta: np.ndarray, ar: float, ap: float
         raise ValueError(f"Invalid model_type: {model}")
 
 def reliability(t: np.ndarray, V: float, beta: float, eta: float) -> np.ndarray:
-    """Función de confiabilidad Weibull con edad virtual"""
+    """Weibull reliability function with virtual age."""
     t = np.asarray(t, dtype=float)
     return np.exp((V / eta)**beta - ((V + t) / eta)**beta)
 
 def pdf(t: np.ndarray, V: float, beta: float, eta: float) -> np.ndarray:
-    """Función de densidad de probabilidad"""
+    """Probability density function."""
     t = np.asarray(t, dtype=float)
     base = (V + t) / eta
     return (beta / eta) * base**(beta - 1) * np.exp((V / eta)**beta - base**beta)
 
 def hazard(t, V, beta, eta):
-    """Tasa de falla (hazard rate)"""
+    """Failure rate (hazard rate)."""
     return (beta / eta) * ((V + t) / eta) ** (beta - 1)
 
 @njit(parallel=True, cache=True)
 def _neg_loglik(x, delta, beta, eta, ar, ap, model_type):
-    """Log-verosimilitud negativa para optimización"""
+    """Negative log-likelihood for optimization."""
     n = x.size
     V_prev = 0.0
     neg_ll = 0.0
@@ -82,11 +82,11 @@ def _neg_loglik(x, delta, beta, eta, ar, ap, model_type):
 
 def virtual_age_ratio(x: np.ndarray, delta: np.ndarray, ar: float, ap: float, model_type: int) -> float:
     """
-    Calcula el promedio de V_i / T_i para un modelo Kijima dado.
-    - x: array de TBX
-    - delta: 1 para correcciones, 0 para preventivas
-    - ar, ap: parámetros de Kijima
-    - model_type: 1 o 2
+    Calculate average V_i / T_i for a given Kijima model.
+    - x: TBX array
+    - delta: 1 for corrective actions, 0 for preventive
+    - ar, ap: Kijima parameters
+    - model_type: 1 or 2
     """
     V = calculate_virtual_age(x, delta, ar, ap, model_type)
     T = np.cumsum(x)
@@ -94,10 +94,10 @@ def virtual_age_ratio(x: np.ndarray, delta: np.ndarray, ar: float, ap: float, mo
 
 def auc_improvement(beta: float, eta: float, Vn: float, t_max: float = None) -> float:
     """
-    Compara el AUC de confiabilidad Kijima vs Weibull puro (ap=ar=1).
-    - beta, eta: parámetros Weibull
-    - Vn: edad virtual al final del periodo
-    - t_max: límite para el cálculo (por defecto hasta suma TBX)
+    Compare Kijima reliability AUC vs pure Weibull (ap=ar=1).
+    - beta, eta: Weibull parameters
+    - Vn: virtual age at the end of the period
+    - t_max: evaluation limit (defaults to cumulative TBX)
     """
     if t_max is None:
         raise ValueError("Define t_max para la evaluación del AUC")

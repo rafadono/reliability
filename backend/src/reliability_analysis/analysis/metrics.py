@@ -3,7 +3,7 @@ from scipy.stats import kstest
 from scipy.integrate import quad
 from src.reliability_analysis.analysis.kijima_model import calculate_virtual_age
 
-# Métricas: AIC, BIC, R², KS-test
+# Metrics: AIC, BIC, R2, KS-test
 def calculate_aic_bic(log_like, k, n):
     aic = 2*k - 2*log_like
     bic = np.log(n)*k - 2*log_like
@@ -13,17 +13,17 @@ def kolmogorov_smirnov_test(x, beta, eta):
     return kstest(x, 'weibull_min', args=(beta, 0, eta))
 
 def ks_test_weibull_pit(x, beta, eta):
-    # PIT para Weibull puro
+    # PIT for pure Weibull
     F = 1 - np.exp(-(x/eta)**beta)
     return kstest(F, 'uniform')
 
 def ks_test_kijima_pit(x, delta, beta, eta, ar, ap, model_type):
     x = np.sort(x)
     V = calculate_virtual_age(x, delta, ar, ap, model_type)
-    # PIT condicionado
+    # Conditional PIT
     S = np.exp((V[-1]/eta)**beta - ((V[-1] + x)/eta)**beta)
     F = 1 - S
-    # Sólo comparas las FALLAS
+    # Compare failures only
     F_fail = F[delta == 1]
     return kstest(F_fail, 'uniform')
 

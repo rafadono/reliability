@@ -1,7 +1,5 @@
 """
-Modelos refactorizados con paradigma OOP.
-
-Encapsula toda la lógica de procesamiento de datos, fitting y cálculos.
+Object-oriented reliability analysis models.
 """
 
 from typing import Dict, List, Tuple, Any, Optional, Union
@@ -23,22 +21,16 @@ logger = setup_logging("Models")
 
 class ReliabilityFitter:
     """
-    Ajusta distribuciones de confiabilidad a datos.
-    
-    Encapsula la lógica de fitting tradicional con Weibull y otras distribuciones.
+    Fits reliability distributions to data.
     """
     
-    def __init__(self, data: Union[pd.DataFrame, None] = None, excluded_models: List[str] = None):
+    def __init__(self, data: Optional[pd.DataFrame] = None, excluded_models: Optional[List[str]] = None):
         """
-        Inicializa el fitter.
-        
-        Args:
-            data: DataFrame con datos (opcional, para compatibilidad)
-            excluded_models: Modelos a excluir del análisis
+        Initialize the fitter.
         """
         self.data = data
         self.excluded_models = excluded_models or EXCLUDED_MODELS
-        logger.info("ReliabilityFitter inicializado")
+        logger.info("ReliabilityFitter initialized")
     
     def fit(
         self,
@@ -47,19 +39,11 @@ class ReliabilityFitter:
         censored_types: List[str]
     ) -> Dict[str, Any]:
         """
-        Ajusta distribuciones a datos.
-        
-        Args:
-            dataframe: DataFrame con datos
-            column: Columna a ajustar ('TBX' o 'TTX')
-            censored_types: Tipos de eventos censurados
-            
-        Returns:
-            Diccionario con resultados del ajuste
+        Fits distributions to the given column in the dataframe.
         """
-        logger.info(f"Iniciando fit para {column}")
+        logger.info(f"Starting fit for {column}")
         
-        # Preparar datos
+        # Prepare data
         data = dataframe[column].dropna()
         censored_mask = dataframe['mdf'].isin(censored_types)
         data = data[~censored_mask & (data > 0)]
@@ -68,7 +52,7 @@ class ReliabilityFitter:
         right_censored = dataframe[column].dropna()[censored_mask].to_numpy()
         right_censored = right_censored[right_censored > 0]
         
-        # Ejecutar fit
+        # Execute fit
         if column == 'TBX' and len(right_censored) > 0:
             fit_results = Fit_Everything(
                 failures=data,
@@ -87,7 +71,7 @@ class ReliabilityFitter:
                 show_PP_plot=False
             )
         
-        # Extraer resultados
+        # Extract results
         best_dist = fit_results.best_distribution
         name = fit_results.best_distribution_name
         parameters = best_dist.parameters
@@ -109,31 +93,27 @@ class ReliabilityFitter:
             'BIC': bic
         }
         
-        logger.info(f"Fit completado: {name}")
+        logger.info(f"Fit completed: {name}")
         return result
     
-    def fit_weibull(self, column: str = 'TTX', censored_failure_types: List[str] = None) -> Dict[str, Any]:
+    def fit_weibull(
+        self, 
+        column: str = 'TTX', 
+        censored_failure_types: List[str] = None
+    ) -> Optional[Dict[str, Any]]:
         """
-        Ajusta Weibull a datos con soporte para datos censurados.
-        
-        Args:
-            column: Columna a ajustar ('TBX' o 'TTX')
-            censored_failure_types: Lista de tipos de eventos censurados (ej: ['MI', 'DO'])
-        
-        Returns:
-            Diccionario con parámetros beta, eta y métricas AIC, BIC
+        Fits Weibull distribution to data, supporting censored data.
         """
         if self.data is None or self.data.empty:
             return None
         
-        # Obtener columna a ajustar
         if column not in self.data.columns:
-            column = 'TTX' if 'TTX' in self.data.columns else 'Dias'
+            column = 'TTX' if 'TTX' in self.data.columns else 'Days'
         if column not in self.data.columns:
-            logger.error(f"Columna {column} no encontrada")
+            logger.error(f"Column {column} not found")
             return None
         
-        # Separar datos sin censura y con censura
+        # Split censored and uncensored data
         df_copy = self.data.copy()
         df_copy[column] = pd.to_numeric(df_copy[column], errors='coerce')
         df_copy = df_copy[df_copy[column] > 0]
@@ -142,19 +122,19 @@ class ReliabilityFitter:
         right_censored = None
         
         if censored_failure_types and 'mdf' in df_copy.columns:
-            # Datos sin censura
+            # Uncensored data
             failures_mask = ~df_copy['mdf'].isin(censored_failure_types)
             failures = df_copy[failures_mask][column].dropna().to_numpy()
             
-            # Datos censurados
+            # Censored data
             censored_mask = df_copy['mdf'].isin(censored_failure_types)
             right_censored = df_copy[censored_mask][column].dropna().to_numpy()
         else:
-            # Todos los datos como no censurados
+            # All data as uncensored
             failures = df_copy[column].dropna().to_numpy()
         
         if failures is None or len(failures) < 2:
-            logger.error("Datos insuficientes para Weibull fit")
+            logger.error("Insufficient data for Weibull fit")
             return None
         
         from reliability.Fitters import Fit_Weibull_2P
@@ -182,28 +162,23 @@ class ReliabilityFitter:
                 'censored_count': int(len(right_censored)) if right_censored is not None else 0
             }
         except Exception as e:
-            logger.error(f"Error en Weibull fit: {str(e)}")
+            logger.error(f"Error in Weibull fit: {str(e)}")
             return None
 
 
 
 
-class KijimaMontecarlo:
+class KijimaFitter:
     """
-    Implementa modelos Kijima I y II para análisis con reparaciones.
-    
-    Encapsula la lógica de cálculo de edad virtual y confiabilidad con Kijima.
+    Implements Kijima I & II models.
     """
     
     def __init__(self, models: List[int] = None):
         """
-        Inicializa Kijima.
-        
-        Args:
-            models: Modelos a usar (1 para Kijima I, 2 para Kijima II)
+        Initialize Kijima models.
         """
         self.models = models or KIJIMA_MODELS
-        logger.info(f"KijimaMontecarlo inicializado con modelos: {self.models}")
+        logger.info(f"KijimaFitter initialized with models: {self.models}")
     
     def _fit_parameters(
         self,
@@ -212,15 +187,7 @@ class KijimaMontecarlo:
         model_type: int
     ) -> Tuple[np.ndarray, float]:
         """
-        Ajusta parámetros de Kijima mediante optimización.
-        
-        Args:
-            x: Array de TBX
-            delta: Array de deltas (1=falla, 0=preventiva)
-            model_type: Tipo de modelo (1 o 2)
-            
-        Returns:
-            Tupla (parámetros, log-likelihood)
+        Fit Kijima parameters using optimization.
         """
         def objective(p):
             return _neg_loglik(x, delta, p[0], p[1], p[2], p[3], model_type)
@@ -230,7 +197,7 @@ class KijimaMontecarlo:
         
         result = minimize(objective, initial, method='L-BFGS-B', bounds=bounds)
         
-        logger.debug(f"Optimización convergida: {result.success}")
+        logger.debug(f"Optimization converged: {result.success}")
         return result.x, -result.fun
     
     def _process_model(
@@ -240,30 +207,22 @@ class KijimaMontecarlo:
         delta: np.ndarray
     ) -> Dict[str, Any]:
         """
-        Procesa un modelo Kijima individual.
-        
-        Args:
-            model_type: Tipo de modelo
-            x: Array de TBX
-            delta: Array de deltas
-            
-        Returns:
-            Diccionario con resultados del modelo
+        Process a single Kijima model.
         """
-        logger.info(f"Procesando Kijima {model_type}")
+        logger.info(f"Processing Kijima {model_type}")
         
         params, ll_max = self._fit_parameters(x, delta, model_type)
         beta, eta, ar, ap = params
         
-        # Edad virtual
+        # Virtual age
         V = calculate_virtual_age(x, delta, ar, ap, model_type)
         V_last = V[-1]
         
-        # Tests y métricas
+        # Tests and metrics
         ks_stat, p_val = ks_test_kijima_pit(x, delta, beta, eta, ar, ap, model_type)
         aic, bic = calculate_aic_bic(ll_max, 4, x.size)
         
-        # MTBF esperado
+        # Expected MTBF
         mtbf, _ = quad(lambda t: reliability(t, V_last, beta, eta), 0, np.inf)
         E2, _ = quad(lambda t: 2 * t * reliability(t, V_last, beta, eta), 0, np.inf)
         var = E2 - mtbf**2
@@ -288,40 +247,31 @@ class KijimaMontecarlo:
         dataframe: pd.DataFrame,
         column: str,
         censored_types: List[str],
-        modelos: Union[int, List[int]] = None
+        models: Union[int, List[int]] = None
     ) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
         """
-        Ajusta modelos Kijima a datos.
-        
-        Args:
-            dataframe: DataFrame con datos
-            column: Columna a ajustar
-            censored_types: Tipos censurados
-            modelos: Modelos a ajustar
-            
-        Returns:
-            Resultados del ajuste
+        Fits Kijima models to data.
         """
-        logger.info(f"Iniciando Kijima fit para {column}")
+        logger.info(f"Starting Kijima fit for {column}")
         
-        # Preparar datos
+        # Prepare data
         df = dataframe.dropna(subset=[column, 'mdf']).copy()
         df = df[df[column] > 0]
         
         x = df[column].to_numpy(dtype=float)
         delta = (~df['mdf'].isin(censored_types)).astype(float).to_numpy()
         
-        # Normalizar entrada de modelos
-        models_list = modelos if isinstance(modelos, (list, tuple)) else [modelos]
+        # Normalize input models
+        models_list = models if isinstance(models, (list, tuple)) else [models]
         models_list = models_list or self.models
         
-        resultados = []
+        results = []
         
-        # Procesar cada modelo
+        # Process each model
         for m in models_list:
             res = self._process_model(m, x, delta)
             
-            # Calcular curvas
+            # Calculate curves
             beta, eta, ar, ap = res['beta'], res['eta'], res['ar'], res['ap']
             V = calculate_virtual_age(x, delta, ar, ap, m)
             T = np.insert(np.cumsum(x), 0, 0.0)
@@ -331,7 +281,7 @@ class KijimaMontecarlo:
             f = np.zeros_like(t_grid)
             h = np.zeros_like(t_grid)
             
-            # Calcular por tramo
+            # Calculate by interval
             V_full = np.insert(V, 0, 0.0)
             for i in range(len(T) - 1):
                 mask = (t_grid >= T[i]) & (t_grid < T[i + 1])
@@ -345,7 +295,7 @@ class KijimaMontecarlo:
                 f[mask] = (beta / eta) * (vt_eta) ** (beta - 1) * R[mask]
                 h[mask] = (beta / eta) * (vt_eta) ** (beta - 1)
             
-            # Último tramo
+            # Last interval
             mask = t_grid >= T[-1]
             t_local = t_grid[mask] - T[-1]
             V_i = V_full[-1]
@@ -364,7 +314,7 @@ class KijimaMontecarlo:
                 'pdf': f
             })
             
-            resultados.append(res)
+            results.append(res)
         
-        logger.info(f"Kijima fit completado: {len(resultados)} modelos")
-        return resultados[0] if len(resultados) == 1 else resultados
+        logger.info(f"Kijima fit completed: {len(results)} models")
+        return results[0] if len(results) == 1 else results

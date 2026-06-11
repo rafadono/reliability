@@ -37,8 +37,8 @@
         </div>
         <div class="flex items-center justify-between gap-2">
           <select v-model="groupBy" class="input-field flex-1" @change="resetDrilldown">
-            <option value="equipo">Group By Equipment</option>
-            <option value="tipo">Group By Type</option>
+            <option value="equipment">Group By Equipment</option>
+            <option value="type">Group By Type</option>
             <option value="mdf">Group By Failure Mode</option>
           </select>
         </div>
@@ -64,7 +64,7 @@ const localFilters = ref({ equipment: '', type: '' })
 const paretoData = ref(null)
 const drilldownEq = ref(null)
 const drilldownType = ref(null)
-const groupBy = ref('equipo')
+const groupBy = ref('equipment')
 
 const loadAnalysis = async () => {
   try {
@@ -78,11 +78,11 @@ const loadAnalysis = async () => {
 }
 
 const handleBarClick = (barName) => {
-  if (groupBy.value === 'equipo') {
+  if (groupBy.value === 'equipment') {
     drilldownEq.value = barName
-    groupBy.value = 'tipo'
+    groupBy.value = 'type'
     loadAnalysis()
-  } else if (groupBy.value === 'tipo') {
+  } else if (groupBy.value === 'type') {
     drilldownType.value = barName
     groupBy.value = 'mdf'
     loadAnalysis()
@@ -98,12 +98,12 @@ const resetDrilldown = () => {
 const resetToEquipment = () => {
   drilldownEq.value = null
   drilldownType.value = null
-  groupBy.value = 'equipo'
+  groupBy.value = 'equipment'
   loadAnalysis()
 }
 const resetToType = () => {
   drilldownType.value = null
-  groupBy.value = 'tipo'
+  groupBy.value = 'type'
   loadAnalysis()
 }
 

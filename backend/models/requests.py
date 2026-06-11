@@ -26,8 +26,8 @@ class AnalysisRequest(BaseModel):
     equipment: Optional[str] = None
     failure_type: Optional[str] = None
     failure_mode: Optional[str] = None
-    types_to_use: Optional[List[str]] = Field(None, description="Lista de tipos a incluir en el análisis")
-    compare_by: str = Field("equipment", description="Comparar por 'equipment' o 'type'")
+    types_to_use: Optional[List[str]] = Field(None, description="List of types to include in the analysis")
+    compare_by: str = Field("equipment", description="Compare by 'equipment' or 'type'")
 
 class WeibullFitRequest(BaseModel):
     equipment: Optional[str] = None
@@ -35,7 +35,7 @@ class WeibullFitRequest(BaseModel):
     failure_mode: Optional[str] = None
     censored_failure_types: Optional[List[str]] = Field(None, description="List of failure types to consider as censored")
     types_to_fit: Optional[List[str]] = Field(None, description="List of failure types to fit")
-    target_column: Optional[str] = Field("TBX", description="Columna a ajustar (TBX para Confiabilidad, TTX para Mantenibilidad)")
+    target_column: Optional[str] = Field("TBX", description="Column to fit (TBX for Reliability, TTX for Maintainability)")
 
 class OptimalPMRequest(WeibullFitRequest):
     cost_pm: float = Field(..., description="Cost of a single Preventive Maintenance action")

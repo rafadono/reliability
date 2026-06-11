@@ -9,7 +9,7 @@
           class="w-full btn-primary text-sm mb-2"
           :class="isLoading ? 'opacity-50' : ''"
         >
-          📁 Upload New Data
+          Upload New Data
         </button>
         <button
           @click="$emit('reset')"
@@ -17,7 +17,7 @@
           class="w-full btn-secondary text-sm"
           :class="isLoading ? 'opacity-50' : ''"
         >
-          🔄 Reset Filters
+          Reset Filters
         </button>
         <input
           type="file"
@@ -36,7 +36,7 @@
               @click="scrollToCard('pareto-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              <span>📊</span> Pareto Analysis
+              Pareto Analysis
             </button>
           </li>
           <li>
@@ -44,7 +44,7 @@
               @click="scrollToCard('jackknife-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              <span>📈</span> Jackknife Diagram
+              Jackknife Diagram
             </button>
           </li>
           <li>
@@ -52,7 +52,7 @@
               @click="scrollToCard('criticality-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              <span>⚡</span> Criticality Matrix
+              Criticality Matrix
             </button>
           </li>
           <li>
@@ -60,7 +60,7 @@
               @click="scrollToCard('weibull-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              <span>🎯</span> Weibull Fitting
+              Weibull Fitting
             </button>
           </li>
           <li>
@@ -68,7 +68,7 @@
               @click="scrollToCard('proactive-pm-section')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              <span>🔧</span> Proactive PM
+              Proactive PM
             </button>
           </li>
           <li>
@@ -76,7 +76,7 @@
               @click="scrollToCard('event-plot-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              <span>⏳</span> Event Timeline
+              Event Timeline
             </button>
           </li>
           <li>
@@ -84,7 +84,7 @@
               @click="scrollToCard('apm-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              <span>🚨</span> Bad Actors APM
+              Bad Actors APM
             </button>
           </li>
           <li>
@@ -92,7 +92,7 @@
               @click="scrollToCard('trend-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              <span>📉</span> Historical KPIs
+              Historical KPIs
             </button>
           </li>
           <li>
@@ -100,7 +100,7 @@
               @click="scrollToCard('nlp-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              <span>💬</span> NLP Comment Mining
+              NLP Comment Mining
             </button>
           </li>
         </ul>
@@ -110,7 +110,7 @@
         <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Navigation</h3>
         <nav class="space-y-2">
           <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium">
-            🏠 Dashboard
+            Dashboard
           </a>
           <a href="#" @click.prevent="$emit('export-pdf')" class="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -118,8 +118,8 @@
             </svg>
             Download PDF
           </a>
-          <a href="#" @click.prevent="$emit('notify', 'Settings module coming soon ⚙️')" class="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
-            ⚙️ Settings
+          <a href="#" @click.prevent="$emit('notify', 'Settings module coming soon')" class="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
+            Settings
           </a>
         </nav>
       </div>

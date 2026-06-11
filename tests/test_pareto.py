@@ -34,7 +34,7 @@ class TestParetoAnalysis:
 
     def test_analyze_by_type_with_equipment(self, sample_data):
         """Test type-level analysis for specific equipment."""
-        equipment = sample_data['Equipo'].unique()[0]
+        equipment = sample_data['Equipment'].unique()[0]
         result = analyze_by_type(sample_data, equipment=equipment)
         
         assert isinstance(result, list)
@@ -43,8 +43,8 @@ class TestParetoAnalysis:
 
     def test_analyze_by_failure_mode(self, sample_data):
         """Test failure mode analysis."""
-        equipment = sample_data['Equipo'].unique()[0]
-        failure_type = sample_data[sample_data['Equipo'] == equipment]['Tipo'].unique()[0]
+        equipment = sample_data['Equipment'].unique()[0]
+        failure_type = sample_data[sample_data['Equipment'] == equipment]['Type'].unique()[0]
         
         result = analyze_by_failure_mode(sample_data, equipment=equipment, failure_type=failure_type)
         

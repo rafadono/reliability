@@ -135,15 +135,15 @@ const maxKeywordCount = computed(() => {
 
 const getCategoryColorClass = (category) => {
   switch (category) {
-    case 'Operacional':
+    case 'Operational':
       return 'bg-blue-500'
-    case 'Limpieza/Atollo':
+    case 'Cleaning/Blockage':
       return 'bg-amber-500'
-    case 'Mecánico':
+    case 'Mechanical':
       return 'bg-red-500'
-    case 'Eléctrico':
+    case 'Electrical':
       return 'bg-purple-500'
-    case 'Instrumentación/Falla':
+    case 'Instrumentation/Failure':
       return 'bg-emerald-500'
     default:
       return 'bg-gray-500'
