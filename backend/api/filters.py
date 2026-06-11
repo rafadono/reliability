@@ -21,8 +21,6 @@ async def get_filters(
         raise HTTPException(status_code=400, detail="No data loaded. Upload a file first.")
     
     try:
-        current_state = state.filter_manager.get_state()
-        
         temp_fm = FilterManager(state.current_data)
         if equipment:
             temp_fm.set_equipment([equipment])

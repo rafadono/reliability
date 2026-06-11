@@ -76,7 +76,6 @@ class TestParetoAnalysis:
     def test_pareto_cumulative(self, sample_data):
         """Cumulative percentage should increase monotonically."""
         result = analyze_by_equipment(sample_data)
-        split = get_80_20_split(result)
         
         if len(result) > 1:
             prev = 0
