@@ -36,6 +36,32 @@ docker-compose up --build
 * **FastAPI Interactive Docs (Swagger)**: http://localhost:8000/docs
 * **FastAPI Alternative Docs (ReDoc)**: http://localhost:8000/redoc
 
+## API Endpoints
+
+### Data & Filters
+- `POST /api/upload` - Upload CSV data file
+- `GET /api/filters` - Get available filter options hierarchically
+- `POST /api/filters/set` - Apply active filters cascade
+- `GET /api/data/available-filters` - Get all unique filter options
+- `GET /api/data/reset-filters` - Reset all filter selections
+
+### Statistics & Overview
+- `GET /api/stats/summary` - Summary statistics for active filters
+
+### Reliability & Maintenance Analytics
+- `POST /api/analysis/pareto` - Pareto failure frequency & 80/20 split
+- `POST /api/analysis/jackknife` - Maintenance Jackknife analysis (LOO Resampling)
+- `POST /api/analysis/fit` - Fits Weibull distributions (for reliability & maintainability curves)
+- `POST /api/analysis/bad-actors` - APM Bad Actor rankings (MTBF, MTTR, Availability)
+- `POST /api/analysis/growth` - Reliability Growth tracking (Crow-AMSAA)
+- `POST /api/analysis/event-plot` - Event timeline dataset generation per asset
+- `POST /api/analysis/optimal-pm` - Calculates optimal Preventive Maintenance interval
+- `POST /api/analysis/conditional-reliability` - Computes conditional mission reliability
+- `POST /api/analysis/kpi-trend` - Historically tracks Monthly KPI trends (MTBF, MTTR, Availability)
+- `POST /api/analysis/comment-mining` - Runs NLP text mining and categorization on log comments
+
+Full interactive documentation (Swagger UI): http://localhost:8000/docs (when API is running)
+
 ---
 
 ## Option 2: Local Development Setup
