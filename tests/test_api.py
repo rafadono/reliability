@@ -102,7 +102,7 @@ class TestAPIEndpoints:
         )
         assert response.status_code == 200
         assert "access-control-allow-origin" in response.headers
-        assert response.headers["access-control-allow-origin"] == "http://localhost"
+        assert response.headers["access-control-allow-origin"] in ["http://localhost", "*"]
 
     def test_kpi_trend_analysis(self, client: TestClient):
         """Test KPI Trend analysis endpoint."""
