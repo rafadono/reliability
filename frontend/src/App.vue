@@ -1,19 +1,28 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-950 transition-colors duration-300">
     <nav class="bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm transition-colors duration-300">
-      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <button v-if="dataLoaded" @click="isSidebarOpen = !isSidebarOpen" class="p-1.5 -ml-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors" title="Toggle Sidebar">
+      <div class="w-full flex items-center justify-between">
+        <div class="flex items-center">
+          <div class="w-64 px-6 py-4 flex items-center gap-3 shrink-0">
+            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+              <span class="text-white font-bold text-lg">RA</span>
+            </div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ $t('navbar.title') }}</h1>
+          </div>
+          <button v-if="dataLoaded" @click="isSidebarOpen = !isSidebarOpen" class="p-2 ml-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors" title="Toggle Sidebar">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span class="text-white font-bold text-lg">RA</span>
-          </div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Reliability Analysis</h1>
         </div>
-        <div class="flex items-center gap-4 text-sm">
+        <div class="flex items-center gap-4 text-sm px-6 py-4">
+          <button 
+            @click="toggleLanguage" 
+            class="p-2 text-gray-500 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-xs font-bold uppercase tracking-wider"
+            :title="locale === 'es' ? 'Switch to English' : 'Cambiar a Español'"
+          >
+            {{ locale === 'es' ? 'ES' : 'EN' }}
+          </button>
           <button 
             @click="toggleDarkMode" 
             class="p-2 text-gray-500 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-xs font-semibold uppercase tracking-wider"
@@ -63,18 +72,25 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Dashboard from './components/Dashboard.vue'
 import FileUpload from './components/FileUpload.vue'
 import Sidebar from './components/Sidebar.vue'
 import { apiService } from './api'
 import html2pdf from 'html2pdf.js'
 
+const { locale } = useI18n()
 const dataLoaded = ref(false)
 const isLoading = ref(false)
 const notification = ref('')
 const dashboardKey = ref(0)
 const isSidebarOpen = ref(true)
 const isDarkMode = ref(false)
+
+const toggleLanguage = () => {
+  locale.value = locale.value === 'es' ? 'en' : 'es'
+  localStorage.setItem('app-lang', locale.value)
+}
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value

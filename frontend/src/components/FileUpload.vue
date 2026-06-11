@@ -7,8 +7,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Upload Data</h2>
-        <p class="text-gray-600 dark:text-slate-400 mt-2">Drag CSV file or click to select</p>
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $t('upload.title') }}</h2>
+        <p class="text-gray-600 dark:text-slate-400 mt-2">{{ $t('upload.desc') }}</p>
       </div>
 
       <div 
@@ -31,16 +31,16 @@
           class="text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium"
           :disabled="isLoading"
         >
-          Select File
+          {{ $t('upload.button') }}
         </button>
       </div>
 
       <div v-if="selectedFile" class="mt-4 p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg">
         <p class="text-sm text-gray-700 dark:text-slate-300">
-          <strong>File:</strong> {{ selectedFile.name }}
+          <strong>{{ $t('upload.file') }}</strong> {{ selectedFile.name }}
         </p>
         <div v-if="isLoading" class="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium text-center flex items-center justify-center gap-2">
-          Uploading...
+          {{ $t('upload.processing') }}
         </div>
       </div>
 
@@ -53,8 +53,10 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { apiService } from '../api'
 
+const { t } = useI18n()
 const emit = defineEmits(['file-uploaded'])
 
 const selectedFile = ref(null)
@@ -70,7 +72,7 @@ const handleFileSelect = (event) => {
     error.value = ''
     uploadFile()
   } else {
-    error.value = 'Please select a valid CSV file'
+    error.value = t('upload.err_invalid')
   }
 }
 
@@ -84,7 +86,7 @@ const handleDrop = (event) => {
     error.value = ''
     uploadFile()
   } else {
-    error.value = 'Please drop a valid CSV file'
+    error.value = t('upload.err_invalid')
   }
 }
 
@@ -98,7 +100,7 @@ const uploadFile = async () => {
     await apiService.upload(selectedFile.value)
     emit('file-uploaded')
   } catch (err) {
-    error.value = err.response?.data?.detail || 'Upload failed. Please try again.'
+    error.value = err.response?.data?.detail || t('upload.err_failed')
     console.error('Upload error:', err)
   } finally {
     isLoading.value = false

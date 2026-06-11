@@ -1,8 +1,8 @@
 <template>
-  <div class="p-8">
+  <div class="p-6 max-w-7xl mx-auto min-h-screen">
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Analysis Dashboard</h1>
-      <p class="text-gray-600 dark:text-slate-400">Independent analysis modules. Customize filters for each chart.</p>
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">{{ $t('dashboard.title') }}</h2>
+      <p class="text-gray-600 dark:text-slate-400">{{ $t('dashboard.desc') }}</p>
     </div>
 
     <div class="space-y-8">
@@ -36,6 +36,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { apiService } from '../api'
 import ParetoCard from './analysis/ParetoCard.vue'
 import JackknifeCard from './analysis/JackknifeCard.vue'

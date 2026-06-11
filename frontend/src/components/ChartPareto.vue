@@ -3,11 +3,11 @@
     <canvas ref="chartContainer" class="max-h-96"></canvas>
     <div v-if="data.analysis" class="mt-4 grid grid-cols-2 gap-4">
       <div class="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-100/10">
-        <p class="text-xs text-gray-600 dark:text-slate-400">Vital Few (80%)</p>
+        <p class="text-xs text-gray-600 dark:text-slate-400">{{ $t('charts.pareto.vital') }}</p>
         <p class="text-lg font-bold text-blue-600 dark:text-blue-400">{{ data.analysis.stats.vital_count }}</p>
       </div>
       <div class="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg border border-gray-200/10">
-        <p class="text-xs text-gray-600 dark:text-slate-400">Trivial Many (20%)</p>
+        <p class="text-xs text-gray-600 dark:text-slate-400">{{ $t('charts.pareto.trivial') }}</p>
         <p class="text-lg font-bold text-gray-600 dark:text-slate-300">{{ data.analysis.stats.trivial_count }}</p>
       </div>
     </div>
@@ -16,9 +16,12 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Chart as ChartJS, registerables } from 'chart.js'
 
 ChartJS.register(...registerables)
+
+const { t, locale } = useI18n()
 
 const props = defineProps({
   data: Object
@@ -51,7 +54,7 @@ const createChart = () => {
       labels: pareto.items,
       datasets: [
         {
-          label: 'Failure Count',
+          label: t('charts.pareto.count'),
           data: pareto.counts,
           backgroundColor: '#3b82f6',
           borderColor: '#1d4ed8',
@@ -59,7 +62,7 @@ const createChart = () => {
           yAxisID: 'y'
         },
         {
-          label: 'Cumulative %',
+          label: t('charts.pareto.cumulative'),
           data: pareto.cumsum_pct,
           type: 'line',
           borderColor: '#a855f7',
@@ -86,7 +89,7 @@ const createChart = () => {
         },
         title: {
           display: true,
-          text: `Pareto Analysis (${props.data.group_by})`,
+          text: `${t('charts.pareto.title')} (${props.data.group_by})`,
           color: textColor
         }
       },
@@ -100,7 +103,12 @@ const createChart = () => {
       scales: {
         x: {
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: t('charts.pareto.causes'),
+            color: textColor
+          }
         },
         y: {
           position: 'left',
@@ -108,7 +116,7 @@ const createChart = () => {
           grid: { color: gridColor },
           title: {
             display: true,
-            text: 'Count',
+            text: t('charts.pareto.count'),
             color: textColor
           }
         },
@@ -118,7 +126,7 @@ const createChart = () => {
           grid: { drawOnChartArea: false, color: gridColor },
           title: {
             display: true,
-            text: 'Cumulative %',
+            text: t('charts.pareto.cumulative'),
             color: textColor
           },
           min: 0,
@@ -137,6 +145,10 @@ const handleThemeChange = () => {
 watch(() => props.data, () => {
   createChart()
 }, { deep: true })
+
+watch(locale, () => {
+  createChart()
+})
 
 onMounted(() => {
   createChart()
