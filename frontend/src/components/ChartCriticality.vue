@@ -9,8 +9,11 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Chart as ChartJS, registerables } from 'chart.js'
+import { useI18n } from 'vue-i18n'
 
 ChartJS.register(...registerables)
+
+const { t, locale } = useI18n()
 
 const props = defineProps({
   data: Object,
@@ -68,7 +71,7 @@ const createChart = () => {
     plugins: [quadrantPlugin],
     data: {
       datasets: [{
-        label: 'Nodes',
+        label: t('charts.criticality.nodes'),
         data: scatterData,
         backgroundColor: '#8b5cf6',
         borderColor: '#7c3aed',
@@ -87,8 +90,8 @@ const createChart = () => {
           callbacks: {
             label: (context) => {
               const point = context.raw
-              const xLabel = props.metricX === 'probability' ? `${point.x.toFixed(2)}% Prob` : `${point.x} Failures`
-              return `${point.label}: ${xLabel}, ${point.y.toFixed(1)} hrs/failure (MTTR)`
+              const xLabel = props.metricX === 'probability' ? `${point.x.toFixed(2)}% Prob` : `${point.x} ${t('charts.jackknife.failures')}`
+              return `${point.label}: ${xLabel}, ${point.y.toFixed(1)} ${t('charts.criticality.hrs_failure')}`
             }
           }
         },
@@ -102,14 +105,14 @@ const createChart = () => {
           type: props.scaleX,
           ticks: { color: textColor },
           grid: { color: gridColor },
-          title: { display: true, text: props.metricX === 'probability' ? 'Probability of Failure (%)' : 'Number of Failures (Frequency)', color: textColor },
+          title: { display: true, text: props.metricX === 'probability' ? t('charts.criticality.prob_failure') : t('charts.jackknife.x_axis'), color: textColor },
           beginAtZero: props.scaleX === 'linear'
         },
         y: {
           type: props.scaleY,
           ticks: { color: textColor },
           grid: { color: gridColor },
-          title: { display: true, text: 'Average Downtime (MTTR)', color: textColor },
+          title: { display: true, text: t('charts.jackknife.y_axis_avg'), color: textColor },
           beginAtZero: props.scaleY === 'linear'
         }
       }
@@ -121,7 +124,7 @@ const handleThemeChange = () => {
   createChart()
 }
 
-watch(() => [props.data, props.scaleX, props.scaleY, props.metricX], createChart, { deep: true })
+watch(() => [props.data, props.scaleX, props.scaleY, props.metricX, locale.value], createChart, { deep: true })
 
 onMounted(() => {
   createChart()

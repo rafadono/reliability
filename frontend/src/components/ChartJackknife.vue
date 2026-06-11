@@ -9,8 +9,11 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Chart as ChartJS, registerables } from 'chart.js'
+import { useI18n } from 'vue-i18n'
 
 ChartJS.register(...registerables)
+
+const { t, locale } = useI18n()
 
 const props = defineProps({
   data: Object,
@@ -71,7 +74,7 @@ const createChart = () => {
     plugins: [quadrantPlugin],
     data: {
       datasets: [{
-        label: 'Equipment/Types',
+        label: t('charts.jackknife.dataset_label'),
         data: scatterData,
         backgroundColor: '#2563eb',
         borderColor: '#1d4ed8',
@@ -90,8 +93,8 @@ const createChart = () => {
           callbacks: {
             label: (context) => {
               const point = context.raw
-              const yLabel = props.metricY === 'average' ? 'hrs/failure (Avg)' : 'hrs Downtime (Total)'
-              return `${point.label}: ${point.x} Failures, ${point.y.toFixed(1)} ${yLabel}`
+              const yLabel = props.metricY === 'average' ? t('charts.jackknife.hrs_avg') : t('charts.jackknife.hrs_total')
+              return `${point.label}: ${point.x} ${t('charts.jackknife.failures')}, ${point.y.toFixed(1)} ${yLabel}`
             }
           }
         },
@@ -105,14 +108,14 @@ const createChart = () => {
           type: props.scaleX,
           ticks: { color: textColor },
           grid: { color: gridColor },
-          title: { display: true, text: 'Number of Failures (Frequency)', color: textColor },
+          title: { display: true, text: t('charts.jackknife.x_axis'), color: textColor },
           beginAtZero: props.scaleX === 'linear'
         },
         y: {
           type: props.scaleY,
           ticks: { color: textColor },
           grid: { color: gridColor },
-          title: { display: true, text: props.metricY === 'average' ? 'Average Downtime (MTTR)' : 'Total Downtime', color: textColor },
+          title: { display: true, text: props.metricY === 'average' ? t('charts.jackknife.y_axis_avg') : t('charts.jackknife.y_axis_total'), color: textColor },
           beginAtZero: props.scaleY === 'linear'
         }
       }
@@ -125,7 +128,7 @@ const handleThemeChange = () => {
   createChart()
 }
 
-watch(() => [props.data, props.scaleX, props.scaleY, props.metricY], createChart, { deep: true })
+watch(() => [props.data, props.scaleX, props.scaleY, props.metricY, locale.value], createChart, { deep: true })
 
 onMounted(() => {
   createChart()

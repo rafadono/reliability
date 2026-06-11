@@ -2,24 +2,24 @@
   <div class="card">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
       <div class="flex items-center gap-2">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Pareto Analysis</h2>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ $t('charts.pareto.title') }}</h2>
         <button 
           @click="isCollapsed = !isCollapsed"
           class="text-xs font-semibold px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 transition-colors"
         >
-          {{ isCollapsed ? 'Expand ⌄' : 'Collapse ⌃' }}
+          {{ isCollapsed ? $t('charts.expand') + ' ⌄' : $t('charts.collapse') + ' ⌃' }}
         </button>
       </div>
       <div class="flex gap-2 bg-gray-50 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
         <select v-model="localFilters.equipment" class="text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500">
-          <option value="">All Equipment</option>
+          <option value="">{{ $t('sidebar.all_equip') }}</option>
           <option v-for="eq in availableEquipment" :key="eq" :value="eq">{{ eq }}</option>
         </select>
         <select v-model="localFilters.type" class="text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500">
-          <option value="">All Types</option>
+          <option value="">{{ $t('sidebar.all_types') }}</option>
           <option v-for="t in availableTypes" :key="t" :value="t">{{ t }}</option>
         </select>
-        <button @click="loadAnalysis" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Update</button>
+        <button @click="loadAnalysis" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">{{ $t('sidebar.apply') }}</button>
       </div>
     </div>
     
@@ -37,9 +37,9 @@
         </div>
         <div class="flex items-center justify-between gap-2">
           <select v-model="groupBy" class="input-field flex-1" @change="resetDrilldown">
-            <option value="equipment">Group By Equipment</option>
-            <option value="type">Group By Type</option>
-            <option value="mdf">Group By Failure Mode</option>
+            <option value="equipment">{{ $t('charts.pareto.group_equip') }}</option>
+            <option value="type">{{ $t('charts.pareto.group_type') }}</option>
+            <option value="mdf">{{ $t('charts.pareto.group_mode') }}</option>
           </select>
         </div>
       </div>
