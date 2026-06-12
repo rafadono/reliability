@@ -115,10 +115,7 @@
         <span class="text-indigo-700 dark:text-indigo-400 font-semibold mb-2">Fase 2/2: Analizando Comentarios</span>
         <p class="text-gray-500 dark:text-slate-400 text-sm max-w-lg text-center leading-relaxed">
           Dependiendo de tu cantidad de registros (miles), el análisis profundo mediante IA puede tardar <strong>entre 5 a 20 minutos</strong> sin tarjeta gráfica. El sistema está trabajando, <strong>por favor no recargues la página</strong>.
-        </p>
-      </div>
-
-      <div v-else-if="miningData && miningData.total_comments > 0 && selectedModelData" class="space-y-6">
+        </p>      <div v-else-if="miningData && miningData.total_comments > 0" class="space-y-6">
         
         <!-- Background Processing Banner -->
         <div v-if="loadingState === 'analyzing' && hasAnyResults" class="bg-indigo-50 dark:bg-indigo-900/30 border-l-4 border-indigo-500 p-4 rounded shadow-sm mb-2">
@@ -132,69 +129,223 @@
             </span>
           </div>
         </div>
-        <!-- Stats summary -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div class="bg-indigo-50 dark:bg-indigo-950/20 p-4 rounded-lg border border-indigo-100/10">
-            <p class="text-xs text-gray-600 dark:text-slate-400">{{ $t('charts.nlp.found') }}</p>
-            <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-450">{{ miningData.total_comments }}</p>
+
+        <!-- Pestañas (Tabs) Navigation -->
+        <div class="border-b border-gray-200 dark:border-slate-700/80 mb-6">
+          <nav class="-mb-px flex flex-wrap gap-4 sm:gap-6" aria-label="Tabs">
+            <button
+              v-for="model in actualModels"
+              :key="model.name"
+              @click="activeTab = model.name"
+              class="whitespace-nowrap pb-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-all duration-200"
+              :class="[
+                activeTab === model.name
+                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
+              ]"
+            >
+              <span>{{ model.name }}</span>
+              <span 
+                class="w-2 h-2 rounded-full transition-colors duration-200"
+                :class="hasResultsForModel(model.name) ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-gray-300 dark:bg-slate-700'"
+              ></span>
+            </button>
+
+            <button
+              @click="activeTab = 'Comparativa'"
+              :disabled="!canShowComparison"
+              class="whitespace-nowrap pb-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              :class="[
+                activeTab === 'Comparativa'
+                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
+              ]"
+            >
+              <span>Comparativa 📊</span>
+              <span 
+                v-if="canShowComparison"
+                class="text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-bold"
+              >
+                {{ analyzedModelsCount }}
+              </span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- TAB CONTENT: COMPARATIVA -->
+        <div v-if="activeTab === 'Comparativa' && canShowComparison" class="space-y-6">
+          <div class="bg-indigo-50/50 dark:bg-indigo-950/10 p-5 rounded-lg border border-indigo-100/20 shadow-sm leading-relaxed">
+            <h4 class="font-bold text-indigo-900 dark:text-indigo-300 mb-1">Métricas de Comparación Cruzada</h4>
+            <p class="text-xs text-gray-600 dark:text-slate-400">
+              Esta sección compara los resultados obtenidos por los modelos analizados. La tasa de coincidencia indica el porcentaje de comentarios clasificados bajo la misma categoría semántica.
+            </p>
           </div>
-          <div class="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-lg border border-emerald-100/10">
-            <p class="text-xs text-gray-600 dark:text-slate-400">{{ $t('charts.nlp.coverage') }}</p>
-            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-450">{{ miningData.coverage.toFixed(1) }}%</p>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Tasa de Coincidencia (Agreement Rate) -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-gray-200 dark:border-slate-750 shadow-sm">
+              <h4 class="font-bold text-gray-900 dark:text-white mb-4">Tasa de Coincidencia</h4>
+              <div class="space-y-4">
+                <div v-for="metric in comparisonMetrics" :key="`${metric.modelA}-${metric.modelB}`" class="p-3.5 bg-gray-50 dark:bg-slate-900/40 rounded-lg border border-gray-150/40 dark:border-slate-700/50 space-y-2">
+                  <div class="flex justify-between items-center text-xs text-gray-500 dark:text-slate-400 font-semibold">
+                    <span class="truncate max-w-[40%]">{{ metric.modelA }}</span>
+                    <span class="text-gray-400">vs</span>
+                    <span class="truncate max-w-[40%]">{{ metric.modelB }}</span>
+                  </div>
+                  <div class="flex justify-between items-end">
+                    <span class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ metric.agreementRate.toFixed(1) }}%</span>
+                    <span class="text-xs text-gray-555 dark:text-slate-400 font-semibold">{{ metric.matches }} / {{ metric.total }} coincidencias</span>
+                  </div>
+                  <div class="w-full bg-gray-100 dark:bg-slate-900 rounded-full h-2">
+                    <div 
+                      class="bg-indigo-600 h-2 rounded-full transition-all duration-500" 
+                      :style="{ width: `${metric.agreementRate}%` }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tiempos de Procesamiento -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-gray-200 dark:border-slate-750 shadow-sm flex flex-col">
+              <h4 class="font-bold text-gray-900 dark:text-white mb-4">Tiempos de Procesamiento</h4>
+              <div class="space-y-4 my-auto">
+                <div v-for="modelName in analyzedModelNames" :key="modelName" class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-gray-700 dark:text-slate-350">
+                    <span class="truncate max-w-[70%]">{{ modelName }}</span>
+                    <span class="font-bold text-amber-600 dark:text-amber-450">{{ getExecutionTimeForModel(modelName) }}s</span>
+                  </div>
+                  <div class="w-full bg-gray-150 dark:bg-slate-900 rounded-full h-2">
+                    <div 
+                      class="bg-amber-500 h-2 rounded-full transition-all duration-500" 
+                      :style="{ width: `${(getExecutionTimeForModel(modelName) / maxExecutionTime) * 100}%` }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="col-span-2 bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-100/10">
-            <p class="text-xs text-gray-600 dark:text-slate-400">Execution Time ({{ selectedModel }})</p>
-            <p class="text-2xl font-bold text-amber-600 dark:text-amber-450">{{ selectedModelData.execution_time_seconds.toFixed(2) }}s</p>
+
+          <!-- Distribución de Categorías Comparada -->
+          <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-750 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-gray-200 dark:border-slate-700/80">
+              <h4 class="font-bold text-gray-900 dark:text-white">Distribución de Categorías</h4>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <thead class="bg-gray-50 dark:bg-slate-900/50">
+                  <tr>
+                    <th scope="col" class="px-5 py-3.5 text-left text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Categoría</th>
+                    <th 
+                      v-for="modelName in analyzedModelNames" 
+                      :key="modelName" 
+                      scope="col" 
+                      class="px-5 py-3.5 text-left text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider truncate max-w-[200px]"
+                    >
+                      {{ modelName }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-250 dark:divide-slate-700/50">
+                  <tr v-for="category in categoryList" :key="category" class="hover:bg-gray-50 dark:hover:bg-slate-700/20 transition-colors">
+                    <td class="px-5 py-3.5 text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <span class="w-2.5 h-2.5 rounded-full" :class="getCategoryColorClass(category)"></span>
+                      {{ translateCategory(category) }}
+                    </td>
+                    <td 
+                      v-for="modelName in analyzedModelNames" 
+                      :key="modelName" 
+                      class="px-5 py-3.5 text-sm text-gray-700 dark:text-slate-350"
+                    >
+                      <span class="font-bold text-gray-900 dark:text-white">{{ getCategoryCountForModel(modelName, category) }}</span>
+                      <span class="text-xs text-gray-500 dark:text-slate-405 ml-1.5">
+                        ({{ ((getCategoryCountForModel(modelName, category) / miningData.total_comments) * 100).toFixed(1) }}%)
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Keyword extraction results -->
-          <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
-            <h3 class="font-bold text-gray-800 dark:text-white mb-4">{{ $t('charts.nlp.top_keywords') }}</h3>
-            <div class="space-y-3">
-              <div v-for="item in selectedModelData.keywords" :key="item.word" class="space-y-1">
-                <div class="flex justify-between text-xs font-semibold text-gray-700 dark:text-slate-300">
-                  <span class="capitalize">{{ item.word }}</span>
-                  <span>{{ item.count }} {{ $t('charts.nlp.occurrences') }}</span>
-                </div>
-                <div class="w-full bg-gray-100 dark:bg-slate-900 rounded-full h-2">
-                  <div 
-                    class="bg-indigo-600 h-2 rounded-full" 
-                    :style="{ width: `${(item.count / maxKeywordCount) * 100}%` }"
-                  ></div>
-                </div>
-              </div>
+        <!-- TAB CONTENT: INDIVIDUAL MODEL RESULTS -->
+        <div v-else-if="selectedModelData" class="space-y-6">
+          <!-- Stats summary -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-indigo-50 dark:bg-indigo-950/20 p-4 rounded-lg border border-indigo-100/10">
+              <p class="text-xs text-gray-600 dark:text-slate-400">{{ $t('charts.nlp.found') }}</p>
+              <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-450">{{ miningData.total_comments }}</p>
+            </div>
+            <div class="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-lg border border-emerald-100/10">
+              <p class="text-xs text-gray-600 dark:text-slate-400">{{ $t('charts.nlp.coverage') }}</p>
+              <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-450">{{ miningData.coverage.toFixed(1) }}%</p>
+            </div>
+            <div class="col-span-2 bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-100/10">
+              <p class="text-xs text-gray-600 dark:text-slate-400">Tiempo de Ejecución ({{ activeTab }})</p>
+              <p class="text-2xl font-bold text-amber-600 dark:text-amber-450">{{ selectedModelData.execution_time_seconds.toFixed(2) }}s</p>
             </div>
           </div>
 
-          <!-- Semantic categories breakdown -->
-          <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
-            <h3 class="font-bold text-gray-800 dark:text-white mb-4">{{ $t('charts.nlp.categories') }}</h3>
-            <div class="space-y-3">
-              <div v-for="cat in selectedModelData.categories" :key="cat.category" class="p-3 bg-gray-50/50 dark:bg-slate-900/30 rounded border border-gray-150/40 dark:border-slate-700/50">
-                <div class="flex items-center justify-between mb-1.5">
-                  <div class="flex items-center gap-2">
-                    <div class="w-2.5 h-2.5 rounded-full" :class="getCategoryColorClass(cat.category)"></div>
-                    <span class="text-sm font-semibold text-gray-805 dark:text-slate-200">{{ translateCategory(cat.category) }}</span>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Keyword extraction results -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
+              <h3 class="font-bold text-gray-800 dark:text-white mb-4">{{ $t('charts.nlp.top_keywords') }}</h3>
+              <div class="space-y-3">
+                <div v-for="item in selectedModelData.keywords" :key="item.word" class="space-y-1">
+                  <div class="flex justify-between text-xs font-semibold text-gray-700 dark:text-slate-350">
+                    <span class="capitalize">{{ item.word }}</span>
+                    <span>{{ item.count }} {{ $t('charts.nlp.occurrences') }}</span>
                   </div>
-                  <span class="text-xs font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-slate-900 px-2 py-0.5 rounded">
-                    {{ cat.count }} {{ $t('charts.nlp.logs') }}
-                  </span>
+                  <div class="w-full bg-gray-100 dark:bg-slate-900 rounded-full h-2">
+                    <div 
+                      class="bg-indigo-600 h-2 rounded-full" 
+                      :style="{ width: `${(item.count / maxKeywordCount) * 100}%` }"
+                    ></div>
+                  </div>
                 </div>
-                <div v-if="cat.count > 0" class="text-xs text-gray-500 dark:text-slate-405 space-y-1.5 pl-4.5 border-l border-gray-200 dark:border-slate-700 ml-1.5 mt-1.5">
-                  <div>
-                    <span class="text-gray-650 dark:text-slate-450 font-medium">{{ $t('charts.nlp.top_types') }}</span> 
-                    <span class="ml-1 text-gray-800 dark:text-slate-300 font-semibold">{{ cat.top_types.filter(t => t && t !== 'nan' && t !== 'Unknown').join(', ') || 'N/A' }}</span>
+              </div>
+            </div>
+
+            <!-- Semantic categories breakdown -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
+              <h3 class="font-bold text-gray-800 dark:text-white mb-4">{{ $t('charts.nlp.categories') }}</h3>
+              <div class="space-y-3">
+                <div v-for="cat in selectedModelData.categories" :key="cat.category" class="p-3 bg-gray-50/50 dark:bg-slate-900/30 rounded border border-gray-150/40 dark:border-slate-700/50">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center gap-2">
+                      <div class="w-2.5 h-2.5 rounded-full" :class="getCategoryColorClass(cat.category)"></div>
+                      <span class="text-sm font-semibold text-gray-850 dark:text-slate-200">{{ translateCategory(cat.category) }}</span>
+                    </div>
+                    <span class="text-xs font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-slate-900 px-2 py-0.5 rounded">
+                      {{ cat.count }} {{ $t('charts.nlp.logs') }}
+                    </span>
                   </div>
-                  <div>
-                    <span class="text-gray-650 dark:text-slate-450 font-medium">{{ $t('charts.nlp.top_modes') }}</span> 
-                    <span class="ml-1 text-gray-800 dark:text-slate-300 font-semibold">{{ cat.top_modes.filter(m => m && m !== 'nan' && m !== 'Unknown').join(', ') || 'N/A' }}</span>
+                  <div v-if="cat.count > 0" class="text-xs text-gray-500 dark:text-slate-405 space-y-1.5 pl-4.5 border-l border-gray-200 dark:border-slate-700 ml-1.5 mt-1.5">
+                    <div>
+                      <span class="text-gray-650 dark:text-slate-450 font-medium">{{ $t('charts.nlp.top_types') }}</span> 
+                      <span class="ml-1 text-gray-800 dark:text-slate-300 font-semibold">{{ cat.top_types.filter(t => t && t !== 'nan' && t !== 'Unknown').join(', ') || 'N/A' }}</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-650 dark:text-slate-450 font-medium">{{ $t('charts.nlp.top_modes') }}</span> 
+                      <span class="ml-1 text-gray-800 dark:text-slate-300 font-semibold">{{ cat.top_modes.filter(m => m && m !== 'nan' && m !== 'Unknown').join(', ') || 'N/A' }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- TAB CONTENT: MODEL NOT ANALYZED YET -->
+        <div v-else class="text-center py-12 bg-gray-50/50 dark:bg-slate-900/20 rounded-lg border border-dashed border-gray-200 dark:border-slate-800">
+          <p class="text-sm text-gray-500 dark:text-slate-400 mb-2">Este modelo aún no ha sido analizado.</p>
+          <button 
+            @click="selectedModel = activeTab; loadMiningData()" 
+            class="text-xs font-bold text-indigo-600 dark:text-indigo-450 hover:underline"
+          >
+            Presiona aquí para descargar y analizar {{ activeTab }}
+          </button>
         </div>
       </div>
 
@@ -219,9 +370,19 @@ const miningData = ref(null)
 const selectedModel = ref('')
 const modelStatusList = ref([])
 
+const activeTab = ref('')
 const analyzingCurrentModel = ref('')
 const analyzingIndex = ref(0)
 const analyzingTotal = ref(0)
+
+const categoryList = [
+  'Operational',
+  'Cleaning/Blockage',
+  'Mechanical',
+  'Electrical',
+  'Instrumentation/Failure',
+  'Others'
+]
 
 onMounted(async () => {
   try {
@@ -238,10 +399,19 @@ onMounted(async () => {
       if (modelStatusList.value.length > 0) {
         selectedModel.value = modelStatusList.value[0].name
       }
+      
+      const firstModel = modelStatusList.value.find(m => m.name !== 'Todos los modelos')
+      if (firstModel) {
+        activeTab.value = firstModel.name
+      }
     }
   } catch (e) {
     console.error('Failed to load model status', e)
   }
+})
+
+const actualModels = computed(() => {
+  return modelStatusList.value.filter(m => m.name !== 'Todos los modelos')
 })
 
 const isSelectedModelDownloaded = computed(() => {
@@ -253,15 +423,89 @@ const hasAnyResults = computed(() => {
   return miningData.value?.results && Object.keys(miningData.value.results).length > 0
 })
 
+const hasResultsForModel = (modelName) => {
+  return !!(miningData.value?.results && miningData.value.results[modelName])
+}
+
+const analyzedModelsCount = computed(() => {
+  if (!miningData.value?.results) return 0
+  return Object.keys(miningData.value.results).length
+})
+
+const canShowComparison = computed(() => {
+  return analyzedModelsCount.value >= 2
+})
+
+const analyzedModelNames = computed(() => {
+  if (!miningData.value || !miningData.value.results) return []
+  return Object.keys(miningData.value.results)
+})
+
 const selectedModelData = computed(() => {
-  if (!miningData.value || !miningData.value.results || !selectedModel.value) return null
-  return miningData.value.results[selectedModel.value]
+  if (!miningData.value || !miningData.value.results || !activeTab.value) return null
+  return miningData.value.results[activeTab.value]
 })
 
 const maxKeywordCount = computed(() => {
   const data = selectedModelData.value
   if (!data || !data.keywords || data.keywords.length === 0) return 1
   return Math.max(...data.keywords.map(k => k.count))
+})
+
+const getCategoryCountForModel = (modelName, category) => {
+  const modelData = miningData.value?.results?.[modelName]
+  if (!modelData || !modelData.categories) return 0
+  const catObj = modelData.categories.find(c => c.category === category)
+  return catObj ? catObj.count : 0
+}
+
+const getExecutionTimeForModel = (modelName) => {
+  return miningData.value?.results?.[modelName]?.execution_time_seconds || 0
+}
+
+const maxExecutionTime = computed(() => {
+  const times = analyzedModelNames.value.map(name => getExecutionTimeForModel(name))
+  return Math.max(...times, 1)
+})
+
+const comparisonMetrics = computed(() => {
+  if (!miningData.value || !miningData.value.results) return []
+  
+  const results = miningData.value.results
+  const models = Object.keys(results).filter(m => results[m].predictions && results[m].predictions.length > 0)
+  
+  if (models.length < 2) return []
+  
+  const metrics = []
+  for (let i = 0; i < models.length; i++) {
+    for (let j = i + 1; j < models.length; j++) {
+      const m1 = models[i]
+      const m2 = models[j]
+      
+      const preds1 = results[m1].predictions
+      const preds2 = results[m2].predictions
+      
+      const minLen = Math.min(preds1.length, preds2.length)
+      if (minLen === 0) continue
+      
+      let matches = 0
+      for (let k = 0; k < minLen; k++) {
+        if (preds1[k] === preds2[k]) {
+          matches++
+        }
+      }
+      
+      const agreementRate = (matches / minLen) * 100
+      metrics.push({
+        modelA: m1,
+        modelB: m2,
+        agreementRate: agreementRate,
+        matches: matches,
+        total: minLen
+      })
+    }
+  }
+  return metrics
 })
 
 const getCategoryColorClass = (category) => {
@@ -326,9 +570,9 @@ const loadMiningData = async () => {
         miningData.value.coverage = res.data.coverage || miningData.value.coverage
         miningData.value.total_comments = res.data.total_comments || miningData.value.total_comments
         
-        // Desbloquear la pantalla en el milisegundo que termine el PRIMER modelo
-        if (i === 0 && selectedModel.value === 'Todos los modelos') {
-          selectedModel.value = modelName
+        // Enfocar la pestaña en el primer modelo que termine de procesar
+        if (i === 0) {
+          activeTab.value = modelName
         }
       }
     }

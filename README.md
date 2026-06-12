@@ -1,5 +1,10 @@
 # Reliability Analysis Platform
 
+[![CI](https://github.com/RafaelInostroza/reliability/actions/workflows/ci.yml/badge.svg)](https://github.com/RafaelInostroza/reliability/actions/workflows/ci.yml)
+![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)
+![Vue 3](https://img.shields.io/badge/vue-3.x-brightgreen.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)
+
 Modern, fast reliability engineering analysis platform built with Vue 3 and FastAPI.
 
 ## Features
@@ -26,7 +31,7 @@ The simplest way to run the entire stack is using Docker Compose:
 1. Run `docker-compose up --build -d`
 2. Access the frontend at `http://localhost:5173` and the backend API at `http://localhost:8000`.
 
-### ⚠️ Important Note on AI Models and GPU/CPU
+### Important Note on AI Models and GPU/CPU
 This project uses Hugging Face AI models for semantic text analysis. 
 By default, the `docker-compose.yml` is configured to build using the **CPU version** of the AI frameworks (`USE_GPU: 0`). 
 If you are running this project on a powerful server or PC with an **Nvidia GPU**, you should enable GPU acceleration to make the text analysis exponentially faster:

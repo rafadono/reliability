@@ -1046,6 +1046,7 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
                 "categories": categories_details,
                 "keywords": top_keywords,
                 "execution_time_seconds": execution_time,
+                "predictions": [r["category"] for r in analyzed_records],
             }
 
         return {
