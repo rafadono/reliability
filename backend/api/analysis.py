@@ -8,6 +8,7 @@ import traceback
 import time
 from src.reliability_analysis.utils.config import NLP_MODELS_TO_COMPARE
 from src.reliability_analysis.analysis.hf_classifier import SemanticModelManager
+from huggingface_hub import scan_cache_dir
 
 import state
 from models.requests import (
@@ -875,7 +876,11 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
             "Others",
         ]
 
-        for model_name in NLP_MODELS_TO_COMPARE:
+        models_to_run = req.types_to_use if req.types_to_use else [NLP_MODELS_TO_COMPARE[0]]
+        if "Todos los modelos" in models_to_run or "All" in models_to_run:
+            models_to_run = NLP_MODELS_TO_COMPARE
+
+        for model_name in models_to_run:
             start_time = time.time()
             analyzed_records = []
 
@@ -1052,3 +1057,57 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Comment mining error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/analysis/models-status", tags=["Analysis"])
+async def models_status() -> Dict[str, Any]:
+    try:
+        from huggingface_hub import scan_cache_dir
+        cache_info = scan_cache_dir()
+        cached_repo_sizes = {}
+        for repo in cache_info.repos:
+            cached_repo_sizes[repo.repo_id] = repo.size_on_disk / (1024 * 1024)
+    except Exception as e:
+        logger.warning(f"Could not scan huggingface cache: {e}")
+        cached_repo_sizes = {}
+
+    models = []
+    from src.reliability_analysis.utils.config import NLP_MODELS_TO_COMPARE
+    for model_name in NLP_MODELS_TO_COMPARE:
+        if model_name == "Legacy Keyword NLP":
+            downloaded = True
+            size_mb = 0.0
+        else:
+            downloaded = model_name in cached_repo_sizes
+            size_mb = cached_repo_sizes.get(model_name, 0.0)
+            
+        models.append({
+            "name": model_name,
+            "downloaded": downloaded,
+            "size_mb": round(size_mb, 1)
+        })
+    return {"status": "success", "models": models}
+
+@router.post("/analysis/download-model", tags=["Analysis"])
+async def download_model(req: AnalysisRequest) -> Dict[str, Any]:
+    from src.reliability_analysis.utils.config import NLP_MODELS_TO_COMPARE
+    from src.reliability_analysis.analysis.hf_classifier import SemanticModelManager
+    
+    models_to_run = req.types_to_use if req.types_to_use else [NLP_MODELS_TO_COMPARE[0]]
+    if "Todos los modelos" in models_to_run or "All" in models_to_run:
+        models_to_run = NLP_MODELS_TO_COMPARE
+
+    hf_models = [m for m in models_to_run if m != "Legacy Keyword NLP"]
+
+    downloaded_models = []
+    try:
+        for model_name in hf_models:
+            # Getting the pipeline forces the download if it is missing
+            SemanticModelManager.get_pipeline(model_name)
+            downloaded_models.append(model_name)
+            
+        return {"status": "success", "downloaded": downloaded_models}
+    except Exception as e:
+        logger.error(f"Error downloading models: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+

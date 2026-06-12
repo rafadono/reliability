@@ -11,8 +11,10 @@ services:
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
+      - ./huggingface_cache:/app/huggingface_cache
     environment:
       - PYTHONUNBUFFERED=1
+      - HF_HOME=/app/huggingface_cache
     restart: unless-stopped
     networks:
       - reliability-net

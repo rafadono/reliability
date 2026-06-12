@@ -25,7 +25,7 @@
     "timeline": "Línea de Tiempo",
     "bad_actors": "Peores Actores (APM)",
     "kpi": "KPIs Históricos",
-    "nlp": "Minería de Textos (NLP)",
+    "ai": "Análisis IA",
     "filters": "Filtros Activos",
     "all_equip": "Todos los Equipos",
     "all_types": "Todos los Tipos",
@@ -172,7 +172,7 @@
       "availability_perc": "Disponibilidad (%)"
     },
     "nlp": {
-      "title": "Minería de Textos NLP",
+      "title": "Análisis de Inteligencia Artificial (IA)",
       "desc": "Analiza textos no estructurados para encontrar causas raíces.",
       "enable": "Habilitar Analítica de Texto",
       "analyze": "Analizar Comentarios",

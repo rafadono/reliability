@@ -28,7 +28,7 @@
 
       <TrendCard id="trend-card" :available-equipment="availableEquipment" />
 
-      <NlpCard id="nlp-card" />
+      <AiAnalysisCard id="ai-card" />
     </div>
 
   </div>
@@ -45,7 +45,7 @@ import WeibullCard from './analysis/WeibullCard.vue'
 import EventPlotCard from './analysis/EventPlotCard.vue'
 import ApmCard from './analysis/ApmCard.vue'
 import TrendCard from './analysis/TrendCard.vue'
-import NlpCard from './analysis/NlpCard.vue'
+import AiAnalysisCard from './analysis/AiAnalysisCard.vue'
 
 const availableEquipment = ref([])
 const availableTypes = ref([])

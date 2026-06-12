@@ -25,7 +25,7 @@
     "timeline": "Event Timeline",
     "bad_actors": "Bad Actors APM",
     "kpi": "Historical KPIs",
-    "nlp": "NLP Comment Mining",
+    "ai": "AI Analysis",
     "filters": "Active Filters",
     "all_equip": "All Equipment",
     "all_types": "All Types",
@@ -189,7 +189,7 @@
       "availability_perc": "Availability (%)"
     },
     "nlp": {
-      "title": "NLP Comment Mining",
+      "title": "Artificial Intelligence (AI) Analysis",
       "desc": "Mine unstructured text logs for failure root causes.",
       "enable": "Enable Text Analytics",
       "analyze": "Analyze Comments",

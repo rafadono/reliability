@@ -63,7 +63,8 @@ If you are running this project on a powerful server or PC with an **Nvidia GPU*
 - `POST /api/analysis/optimal-pm` - Calculates optimal Preventive Maintenance interval
 - `POST /api/analysis/conditional-reliability` - Computes conditional mission reliability
 - `POST /api/analysis/kpi-trend` - Historically tracks Monthly KPI trends (MTBF, MTTR, Availability)
-- `POST /api/analysis/comment-mining` - Runs NLP text mining and categorization on log comments
+- `POST /api/analysis/download-model` - Pre-downloads Hugging Face AI models to local cache
+- `POST /api/analysis/comment-mining` - Runs zero-shot semantic text classification on log comments
 
 Full interactive documentation (Swagger UI): http://localhost:8000/docs (when API is running)
 

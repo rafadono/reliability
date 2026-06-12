@@ -83,3 +83,6 @@ Thumbs.db
 .streamlit/
 streamlit_logger.log
 
+
+# Hugging Face Cache
+huggingface_cache/

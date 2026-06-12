@@ -4,7 +4,7 @@ const API_BASE = '/api'
 
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 30000
+  timeout: 0 // No timeout to allow long-running ML operations
 })
 
 api.interceptors.response.use(
@@ -118,14 +118,25 @@ export const apiService = {
     })
   },
 
-  getCommentMining(equipment, failureType) {
+  getCommentMining(equipment, failureType, modelName) {
     return api.post('/analysis/comment-mining', {
       equipment,
-      failure_type: failureType
+      failure_type: failureType,
+      types_to_use: modelName ? [modelName] : null
     })
   },
 
   getSummaryStats() {
     return api.get('/stats/summary')
-  }
+  },
+
+  getModelsStatus() {
+    return api.get('/analysis/models-status')
+  },
+
+  downloadModels(modelName) {
+    return api.post('/analysis/download-model', {
+      types_to_use: modelName ? [modelName] : null
+    })
+  },
 }

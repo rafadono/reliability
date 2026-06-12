@@ -97,10 +97,10 @@
           </li>
           <li>
             <button 
-              @click="scrollToCard('nlp-card')" 
+              @click="scrollToCard('ai-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              {{ $t('sidebar.nlp') }}
+              {{ $t('sidebar.ai') }}
             </button>
           </li>
         </ul>
