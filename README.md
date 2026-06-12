@@ -1,6 +1,6 @@
 # Reliability Analysis Platform
 
-[![CI](https://github.com/RafaelInostroza/reliability/actions/workflows/ci.yml/badge.svg)](https://github.com/RafaelInostroza/reliability/actions/workflows/ci.yml)
+[![CI](https://github.com/rafadono/reliability/actions/workflows/ci.yml/badge.svg)](https://github.com/rafadono/reliability/actions/workflows/ci.yml)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)
 ![Vue 3](https://img.shields.io/badge/vue-3.x-brightgreen.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)

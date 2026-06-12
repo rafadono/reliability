@@ -14,7 +14,7 @@ The easiest way to get started is to use Docker, but for active development, run
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/RafaelInostroza/reliability.git
+git clone https://github.com/rafadono/reliability.git
 cd reliability
 ```
 
