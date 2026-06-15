@@ -14,6 +14,7 @@ from src.reliability_analysis.analysis.kijima_model import (
     calculate_virtual_age,
     reliability,
     _neg_loglik,
+    _neg_loglik_td,
 )
 from src.reliability_analysis.analysis.metrics import (
     calculate_aic_bic,
@@ -193,12 +194,27 @@ class KijimaFitter:
         """
         Fit Kijima parameters using optimization.
         """
+        if model_type in (1, 2):
+            def objective(p):
+                return _neg_loglik(x, delta, p[0], p[1], p[2], p[3], model_type)
 
-        def objective(p):
-            return _neg_loglik(x, delta, p[0], p[1], p[2], p[3], model_type)
+            bounds = [(1e-6, None), (1e-6, None), (1e-2, 0.99), (1e-2, 0.99)]
+            initial = [1.0, x.mean(), 0.5, 0.7]
+        else:  # Time-dependent models 3 & 4
+            def objective(p):
+                return _neg_loglik_td(
+                    x, delta, p[0], p[1], p[2], p[3], p[4], p[5], model_type
+                )
 
-        bounds = [(1e-6, None), (1e-6, None), (1e-2, 0.99), (1e-2, 0.99)]
-        initial = [1.0, x.mean(), 0.5, 0.7]
+            bounds = [
+                (1e-6, None),
+                (1e-6, None),
+                (1e-2, 0.99),
+                (1e-2, 0.99),
+                (-10.0, 10.0),
+                (-10.0, 10.0),
+            ]
+            initial = [1.0, x.mean(), 0.5, 0.7, 0.0, 0.0]
 
         result = minimize(objective, initial, method="L-BFGS-B", bounds=bounds)
 
@@ -214,15 +230,23 @@ class KijimaFitter:
         logger.info(f"Processing Kijima {model_type}")
 
         params, ll_max = self._fit_parameters(x, delta, model_type)
-        beta, eta, ar, ap = params
+        if model_type in (1, 2):
+            beta, eta, ar, ap = params
+            br, bp = 0.0, 0.0
+            k = 4
+        else:
+            beta, eta, ar, ap, br, bp = params
+            k = 6
 
         # Virtual age
-        V = calculate_virtual_age(x, delta, ar, ap, model_type)
+        V = calculate_virtual_age(x, delta, ar, ap, model_type, br, bp)
         V_last = V[-1]
 
         # Tests and metrics
-        ks_stat, p_val = ks_test_kijima_pit(x, delta, beta, eta, ar, ap, model_type)
-        aic, bic = calculate_aic_bic(ll_max, 4, x.size)
+        ks_stat, p_val = ks_test_kijima_pit(
+            x, delta, beta, eta, ar, ap, model_type, br, bp
+        )
+        aic, bic = calculate_aic_bic(ll_max, k, x.size)
 
         # Expected MTBF
         mtbf, _ = quad(lambda t: reliability(t, V_last, beta, eta), 0, np.inf)
@@ -230,12 +254,21 @@ class KijimaFitter:
         var = E2 - mtbf**2
         std = np.sqrt(var)
 
+        model_name_map = {
+            1: "Kijima I",
+            2: "Kijima II",
+            3: "Kijima I TD",
+            4: "Kijima II TD",
+        }
+
         return {
-            "model_name": f"Kijima {'I' if model_type == 1 else 'II'}",
+            "model_name": model_name_map.get(model_type, f"Kijima {model_type}"),
             "beta": beta,
             "eta": eta,
             "ar": ar,
             "ap": ap,
+            "br": br,
+            "bp": bp,
             "AIC": aic,
             "BIC": bic,
             "p_value": p_val,
@@ -275,7 +308,8 @@ class KijimaFitter:
 
             # Calculate curves
             beta, eta, ar, ap = res["beta"], res["eta"], res["ar"], res["ap"]
-            V = calculate_virtual_age(x, delta, ar, ap, m)
+            br, bp = res.get("br", 0.0), res.get("bp", 0.0)
+            V = calculate_virtual_age(x, delta, ar, ap, m, br, bp)
             T = np.insert(np.cumsum(x), 0, 0.0)
             t_grid = np.linspace(0, T[-1], 300)
 
@@ -309,7 +343,7 @@ class KijimaFitter:
             f[mask] = (beta / eta) * (vt_eta) ** (beta - 1) * R[mask]
             h[mask] = (beta / eta) * (vt_eta) ** (beta - 1)
 
-            res.update({"t": t_grid, "R": R, "failure_rate": h, "pdf": f})
+            res.update({"t": t_grid, "R": R, "failure_rate": h, "pdf": f, "V": V, "T": T})
 
             results.append(res)
 

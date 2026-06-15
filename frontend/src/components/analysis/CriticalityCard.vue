@@ -242,38 +242,13 @@ const metricX = ref('count')
 const showExplanation = ref(false)
 
 const classifiedRegions = computed(() => {
-  if (!criticalityData.value?.scatter_data) return null
-  const avgX = metricX.value === 'probability' ? (criticalityData.value.averages?.probability * 100 || 0) : (criticalityData.value.averages?.failures || 0)
-  const avgY = criticalityData.value.averages?.avg_downtime || 0
-
-  const regions = {
-    highRisk: [],
-    highConsequence: [],
-    highFrequency: [],
-    lowRisk: []
-  }
-
-  criticalityData.value.scatter_data.forEach(item => {
-    const x = metricX.value === 'probability' ? item.x_prob * 100 : item.x
-    const y = item.y_avg
-    if (x > avgX && y > avgY) {
-      regions.highRisk.push({ ...item, x_val: x })
-    } else if (x <= avgX && y > avgY) {
-      regions.highConsequence.push({ ...item, x_val: x })
-    } else if (x > avgX && y <= avgY) {
-      regions.highFrequency.push({ ...item, x_val: x })
-    } else {
-      regions.lowRisk.push({ ...item, x_val: x })
-    }
-  })
-
-  return regions
+  return criticalityData.value?.regions || null
 })
 
 const loadAnalysis = async () => {
   try {
     await apiService.setFilters(localFilters.value.equipment)
-    const res = await apiService.getJackknifeAnalysis(undefined, undefined, compareBy.value, null)
+    const res = await apiService.getCriticalityAnalysis(undefined, undefined, compareBy.value, metricX.value)
     criticalityData.value = res.data
   } catch (err) { console.error('Error loading Criticality analysis:', err) }
 }
@@ -283,6 +258,10 @@ watch(() => localFilters.value.equipment, (newEq) => {
   if (newEq && compareBy.value === 'equipment') {
     compareBy.value = 'type'
   }
+  loadAnalysis()
+})
+
+watch(() => metricX.value, () => {
   loadAnalysis()
 })
 

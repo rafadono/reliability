@@ -227,32 +227,7 @@ const scaleY = ref('linear')
 const showExplanation = ref(false)
 
 const classifiedRegions = computed(() => {
-  if (!jackknifeData.value?.scatter_data) return null
-  const avgX = jackknifeData.value.averages?.failures || 0
-  const avgY = jackknifeData.value.averages?.total_downtime || 0
-
-  const regions = {
-    acuteChronic: [],
-    acute: [],
-    chronic: [],
-    acceptable: []
-  }
-
-  jackknifeData.value.scatter_data.forEach(item => {
-    const x = item.x
-    const y = item.y_total
-    if (x > avgX && y > avgY) {
-      regions.acuteChronic.push(item)
-    } else if (x <= avgX && y > avgY) {
-      regions.acute.push(item)
-    } else if (x > avgX && y <= avgY) {
-      regions.chronic.push(item)
-    } else {
-      regions.acceptable.push(item)
-    }
-  })
-
-  return regions
+  return jackknifeData.value?.regions || null
 })
 
 const loadAnalysis = async () => {

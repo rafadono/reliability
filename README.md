@@ -60,7 +60,7 @@ If you are running this project on a powerful server or PC with an **Nvidia GPU*
 
 ### Reliability & Maintenance Analytics
 - `POST /api/analysis/pareto` - Pareto failure frequency & 80/20 split
-- `POST /api/analysis/jackknife` - Maintenance Jackknife analysis (LOO Resampling)
+- `POST /api/analysis/jackknife-plot` - Maintenance Jackknife plot (failure frequency vs total downtime scatter & averages)
 - `POST /api/analysis/fit` - Fits Weibull distributions (for reliability & maintainability curves)
 - `POST /api/analysis/bad-actors` - APM Bad Actor rankings (MTBF, MTTR, Availability)
 - `POST /api/analysis/growth` - Reliability Growth tracking (Crow-AMSAA)
@@ -159,7 +159,7 @@ Pump B;Hydraulic;Seal;120;1;01/02/2026;Operational decision failure
 **Frontend:**
 - Vue 3 - Reactive user interface (Composition API)
 - Vite - Production build tool
-- Chart.js & vue-chartjs - Canvas charts
+- Chart.js - Canvas charts
 - Tailwind CSS - Component styling
 
 ---
@@ -177,3 +177,13 @@ The codebase is structured around PEP 8 styles using Ruff:
 ```bash
 ruff check .
 ```
+
+---
+
+## Future Review & Unused Features
+
+The following features and functions are implemented and tested, but currently not active in the main UI/API workflow:
+- **General Distribution Fitting**: `ReliabilityFitter.fit` in `models.py` uses the `reliability` package's `Fit_Everything` to fit 10+ probability distributions. Kept for future development if non-Weibull parametric fittings are needed.
+- **Kijima Virtual Age Model**: `KijimaFitter` and `kijima_model.py` are fully implemented and tested core analytical tools, left for future API/UI integration.
+- **Unused Core Helper Functions & Metrics**: `kolmogorov_smirnov_test`, `ks_test_weibull_pit`, and `r2_mrl` in `metrics.py` are preserved as they could be useful for validation/goodness-of-fit once broader fitting algorithms are enabled.
+- **DataProcessor Helper Methods**: `get_equipment_types` and `calculate_tbf` in `data_processing.py` are kept for utility in custom script pipelines.

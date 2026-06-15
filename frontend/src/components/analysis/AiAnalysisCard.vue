@@ -115,7 +115,9 @@
         <span class="text-indigo-700 dark:text-indigo-400 font-semibold mb-2">Fase 2/2: Analizando Comentarios</span>
         <p class="text-gray-500 dark:text-slate-400 text-sm max-w-lg text-center leading-relaxed">
           Dependiendo de tu cantidad de registros (miles), el análisis profundo mediante IA puede tardar <strong>entre 5 a 20 minutos</strong> sin tarjeta gráfica. El sistema está trabajando, <strong>por favor no recargues la página</strong>.
-        </p>      <div v-else-if="miningData && miningData.total_comments > 0" class="space-y-6">
+        </p>
+      </div>
+      <div v-else-if="miningData && miningData.total_comments > 0" class="space-y-6">
         
         <!-- Background Processing Banner -->
         <div v-if="loadingState === 'analyzing' && hasAnyResults" class="bg-indigo-50 dark:bg-indigo-900/30 border-l-4 border-indigo-500 p-4 rounded shadow-sm mb-2">

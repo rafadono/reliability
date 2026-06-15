@@ -24,13 +24,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Silence repetitive initialization logs to avoid console spam
-# (especially useful during thousands of Jackknife iterations)
+# (especially useful during thousands of model fitting iterations)
 logging.getLogger("Models").setLevel(logging.WARNING)
 logging.getLogger("FilterManager").propagate = False
 
 app = FastAPI(
     title="Reliability Analysis API",
-    description="Backend API for advanced reliability analysis with Pareto and Jackknife",
+    description="Backend API for advanced reliability analysis with Pareto and Weibull",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",

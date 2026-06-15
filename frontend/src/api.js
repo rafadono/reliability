@@ -55,11 +55,20 @@ export const apiService = {
   },
 
   getJackknifeAnalysis(equipment, failureType, compareBy = 'equipment', typesToUse = null) {
-    return api.post('/analysis/jackknife', {
+    return api.post('/analysis/jackknife-plot', {
       equipment,
       failure_type: failureType,
       compare_by: compareBy,
       types_to_use: typesToUse
+    })
+  },
+
+  getCriticalityAnalysis(equipment, failureType, compareBy = 'mode', metricX = 'count') {
+    return api.post('/analysis/criticality-plot', {
+      equipment,
+      failure_type: failureType,
+      compare_by: compareBy,
+      metric_x: metricX
     })
   },
 
@@ -70,6 +79,15 @@ export const apiService = {
       types_to_fit: typesToFit,
       censored_failure_types: censoredFailureTypes,
       target_column: targetColumn
+    })
+  },
+
+  fitKijima(equipment, failureType, typesToFit = null, censoredFailureTypes = null) {
+    return api.post('/analysis/kijima-fit', {
+      equipment,
+      failure_type: failureType,
+      types_to_fit: typesToFit,
+      censored_failure_types: censoredFailureTypes
     })
   },
 

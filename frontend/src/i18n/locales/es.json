@@ -195,6 +195,37 @@
       "top_modes": "Modos Principales:",
       "no_comments": "No se encontraron comentarios en los datos bajo los filtros activos.",
       "model": "Modelo:"
+    },
+    "kijima": {
+      "title": "Modelos Imperfectos de Kijima (GRP)",
+      "desc": "Ajuste de modelos de edad virtual Kijima I & II (Constante y Dependiente del Tiempo) comparados con Weibull tradicional.",
+      "models_to_plot": "Modelos a Graficar",
+      "model_type": "Modelo",
+      "weibull": "Weibull Tradicional",
+      "k1_c": "Kijima I (Constante)",
+      "k2_c": "Kijima II (Constante)",
+      "k1_td": "Kijima I (Dep. Tiempo)",
+      "k2_td": "Kijima II (Dep. Tiempo)",
+      "virtual_age": "Edad Virtual vs Tiempo Calendario",
+      "parameters": "Parámetros",
+      "constants": "Constantes",
+      "goodness": "Bondad de Ajuste",
+      "comparison_table": "Tabla Comparativa de Modelos",
+      "metric_aic": "AIC",
+      "metric_bic": "BIC",
+      "p_value": "p-valor (KS)",
+      "mtbf": "MTBF Estimado",
+      "std_dev": "Desviación Estándar",
+      "sample_size": "Tamaño de Muestra",
+      "failures_count": "Conteo de Fallas",
+      "restoration_factor": "Factor de Restauración",
+      "legends_display": "Parámetros de Ajuste",
+      "ar": "ar (Eficacia Correctiva Base)",
+      "ap": "ap (Eficacia Preventiva Base)",
+      "br": "br (Dep. Temporal Correctiva)",
+      "bp": "bp (Dep. Temporal Preventiva)",
+      "beta": "Beta (Forma)",
+      "eta": "Eta (Escala)"
     }
   }
 }

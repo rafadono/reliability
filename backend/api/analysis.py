@@ -17,9 +17,11 @@ from models.requests import (
     WeibullFitRequest,
     OptimalPMRequest,
     ConditionalReliabilityRequest,
+    CriticalityRequest,
+    KijimaFitRequest,
 )
 from src.reliability_analysis.analysis.pareto import ParetoAnalyzer
-from src.reliability_analysis.analysis.models import ReliabilityFitter
+from src.reliability_analysis.analysis.models import ReliabilityFitter, KijimaFitter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -67,8 +69,13 @@ async def pareto_analysis(req: ParetoRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/analysis/jackknife", tags=["Analysis"])
-async def jackknife_analysis(req: AnalysisRequest) -> Dict[str, Any]:
+@router.post("/analysis/jackknife-plot", tags=["Analysis"])
+async def jackknife_plot_analysis(req: AnalysisRequest) -> Dict[str, Any]:
+    """
+    Get scatter plot data (frequency vs total downtime) and classified regions for the Maintenance Jackknife diagram.
+    Note: This does not perform statistical Leave-One-Out resampling (Jackknife confidence intervals),
+    but groups and aggregates failure records to identify chronic and acute bad actors.
+    """
     if state.current_data is None or state.filter_manager is None:
         raise HTTPException(status_code=400, detail="No data loaded")
 
@@ -110,18 +117,40 @@ async def jackknife_analysis(req: AnalysisRequest) -> Dict[str, Any]:
         avg_total = float(stats["total_downtime"].mean()) if not stats.empty else 0
         avg_mean = float(stats["avg_downtime"].mean()) if not stats.empty else 0
 
-        scatter_data = [
-            {
+        scatter_data = []
+        for _, row in stats.iterrows():
+            item_failures = float(row["failures"])
+            item_downtime = float(row["total_downtime"])
+            item_avg_downtime = float(row["avg_downtime"])
+            item_prob = item_failures / total_failures if total_failures > 0 else 0.0
+
+            scatter_data.append({
                 "name": str(row[group_col]),
-                "x": float(row["failures"]),
-                "x_prob": float(row["failures"]) / total_failures
-                if total_failures > 0
-                else 0.0,
-                "y_total": float(row["total_downtime"]),
-                "y_avg": float(row["avg_downtime"]),
-            }
-            for _, row in stats.iterrows()
-        ]
+                "x": item_failures,
+                "x_prob": item_prob,
+                "y_total": item_downtime,
+                "y_avg": item_avg_downtime,
+            })
+
+        # Calculate regions on backend (all business/analytical calculations here)
+        regions = {
+            "acuteChronic": [],
+            "acute": [],
+            "chronic": [],
+            "acceptable": []
+        }
+
+        for item in scatter_data:
+            x = item["x"]
+            y = item["y_total"]
+            if x > avg_failures and y > avg_total:
+                regions["acuteChronic"].append(item)
+            elif x <= avg_failures and y > avg_total:
+                regions["acute"].append(item)
+            elif x > avg_failures and y <= avg_total:
+                regions["chronic"].append(item)
+            else:
+                regions["acceptable"].append(item)
 
         return {
             "status": "success",
@@ -132,10 +161,119 @@ async def jackknife_analysis(req: AnalysisRequest) -> Dict[str, Any]:
                 "total_downtime": avg_total,
                 "avg_downtime": avg_mean,
             },
+            "regions": regions,
         }
     except Exception as e:
-        logger.error(f"Jackknife analysis error: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"Jackknife plot analysis error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/analysis/criticality-plot", tags=["Analysis"])
+async def criticality_plot_analysis(req: CriticalityRequest) -> Dict[str, Any]:
+    """
+    Get scatter plot data (frequency/probability vs average downtime) and classified regions for the Criticality Matrix.
+    """
+    if state.current_data is None or state.filter_manager is None:
+        raise HTTPException(status_code=400, detail="No data loaded")
+
+    try:
+        data = state.filter_manager.get_filtered_data()
+
+        if req.types_to_use:
+            data = data[data["Type"].isin(req.types_to_use)]
+
+        if data.empty:
+            raise HTTPException(status_code=400, detail="Filtered data is empty")
+
+        if req.compare_by == "equipment":
+            group_col = "Equipment"
+        elif req.compare_by == "type":
+            group_col = "Type"
+        elif req.compare_by == "mode":
+            group_col = "mdf"
+        else:
+            group_col = "Equipment"
+
+        if group_col not in data.columns:
+            group_col = "Equipment"
+
+        stats = (
+            data.groupby(group_col)
+            .agg(
+                failures=(group_col, "count"),
+                total_downtime=("TTX", "sum"),
+                avg_downtime=("TTX", "mean"),
+            )
+            .reset_index()
+        )
+
+        total_failures = float(stats["failures"].sum())
+
+        avg_failures = float(stats["failures"].mean()) if not stats.empty else 0
+        avg_prob = (avg_failures / total_failures) if total_failures > 0 else 0
+        avg_total = float(stats["total_downtime"].mean()) if not stats.empty else 0
+        avg_mean = float(stats["avg_downtime"].mean()) if not stats.empty else 0
+
+        scatter_data = []
+        for _, row in stats.iterrows():
+            item_failures = float(row["failures"])
+            item_downtime = float(row["total_downtime"])
+            item_avg_downtime = float(row["avg_downtime"])
+            item_prob = item_failures / total_failures if total_failures > 0 else 0.0
+
+            scatter_data.append({
+                "name": str(row[group_col]),
+                "x": item_failures,
+                "x_prob": item_prob,
+                "y_total": item_downtime,
+                "y_avg": item_avg_downtime,
+            })
+
+        # Calculate regions on backend (all business/analytical calculations here)
+        metric_x = req.metric_x or "count"
+        if metric_x == "probability":
+            avg_x = avg_prob * 100.0
+        else:
+            avg_x = avg_failures
+        avg_y = avg_mean
+
+        regions = {
+            "highRisk": [],
+            "highConsequence": [],
+            "highFrequency": [],
+            "lowRisk": []
+        }
+
+        for item in scatter_data:
+            x_val = item["x_prob"] * 100.0 if metric_x == "probability" else item["x"]
+            y_val = item["y_avg"]
+
+            item_with_val = {**item, "x_val": x_val}
+
+            if x_val > avg_x and y_val > avg_y:
+                regions["highRisk"].append(item_with_val)
+            elif x_val <= avg_x and y_val > avg_y:
+                regions["highConsequence"].append(item_with_val)
+            elif x_val > avg_x and y_val <= avg_y:
+                regions["highFrequency"].append(item_with_val)
+            else:
+                regions["lowRisk"].append(item_with_val)
+
+        return {
+            "status": "success",
+            "scatter_data": scatter_data,
+            "averages": {
+                "failures": avg_failures,
+                "probability": avg_prob,
+                "total_downtime": avg_total,
+                "avg_downtime": avg_mean,
+            },
+            "regions": regions,
+        }
+    except Exception as e:
+        logger.error(f"Criticality plot analysis error: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 @router.post("/analysis/fit", tags=["Analysis"])
@@ -1111,4 +1249,72 @@ async def download_model(req: AnalysisRequest) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error downloading models: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/analysis/kijima-fit", tags=["Analysis"])
+async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
+    if state.current_data is None or state.filter_manager is None:
+        raise HTTPException(status_code=400, detail="No data loaded")
+
+    try:
+        data = state.filter_manager.get_filtered_data()
+
+        if req.types_to_fit:
+            data = data[data["Type"].isin(req.types_to_fit)]
+
+        if data.empty:
+            return {
+                "status": "error",
+                "message": "Filtered data is empty",
+                "models": [],
+            }
+
+        fit_data = data.copy()
+        target_col = "TBX"
+
+        if "Days" in fit_data.columns and "TBX" not in fit_data.columns:
+            target_col = "Days"
+
+        if target_col in fit_data.columns and target_col != "TBX":
+            fit_data["TBX"] = fit_data[target_col]
+
+        if "TBX" not in fit_data.columns:
+            raise HTTPException(status_code=400, detail="No time-between-failures (TBX) column found in the dataset.")
+
+        censored_types = req.censored_failure_types or []
+
+        fitter = KijimaFitter()
+        results = fitter.fit(
+            dataframe=fit_data,
+            column="TBX",
+            censored_types=censored_types,
+            models=[1, 2, 3, 4],
+        )
+
+        if isinstance(results, dict):
+            results = [results]
+
+        serialized_results = []
+        for res in results:
+            serialized_res = {}
+            for k, v in res.items():
+                if isinstance(v, np.ndarray):
+                    serialized_res[k] = v.tolist()
+                elif isinstance(v, (np.float32, np.float64)):
+                    serialized_res[k] = float(v)
+                elif isinstance(v, (np.int32, np.int64)):
+                    serialized_res[k] = int(v)
+                else:
+                    serialized_res[k] = v
+            serialized_results.append(serialized_res)
+
+        return {
+            "status": "success",
+            "models": serialized_results,
+            "sample_size": len(fit_data),
+        }
+    except Exception as e:
+        logger.error(f"Kijima fit analysis error: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=400, detail=str(e))
+
 

@@ -77,15 +77,27 @@ class TestAPIEndpoints:
         assert "pareto" in data
         assert len(data["pareto"]) > 0
 
-    def test_jackknife_analysis(self, client: TestClient):
-        """Test Jackknife analysis endpoint."""
+    def test_jackknife_plot_analysis(self, client: TestClient):
+        """Test Jackknife plot analysis endpoint."""
         response = client.post(
-            "/api/analysis/jackknife", json={"compare_by": "equipment"}
+            "/api/analysis/jackknife-plot", json={"compare_by": "equipment"}
         )
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "success"
         assert "scatter_data" in data
+
+    def test_criticality_plot_analysis(self, client: TestClient):
+        """Test Criticality plot analysis endpoint."""
+        response = client.post(
+            "/api/analysis/criticality-plot", json={"compare_by": "mode", "metric_x": "count"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert "scatter_data" in data
+        assert "regions" in data
+        assert "highRisk" in data["regions"]
 
     def test_summary_stats(self, client: TestClient):
         """Test summary statistics endpoint."""

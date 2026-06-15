@@ -212,6 +212,37 @@
       "top_modes": "Top Modes:",
       "no_comments": "No comments found in dataset matching active filters.",
       "model": "Model:"
+    },
+    "kijima": {
+      "title": "Kijima Imperfect Repair Models (GRP)",
+      "desc": "Fit Kijima I & II virtual age models (Constant and Time-Dependent) compared to traditional Weibull.",
+      "models_to_plot": "Models to Plot",
+      "model_type": "Model",
+      "weibull": "Traditional Weibull",
+      "k1_c": "Kijima I (Constant)",
+      "k2_c": "Kijima II (Constant)",
+      "k1_td": "Kijima I (Time-Dep)",
+      "k2_td": "Kijima II (Time-Dep)",
+      "virtual_age": "Virtual Age vs Calendar Time",
+      "parameters": "Parameters",
+      "constants": "Constants",
+      "goodness": "Goodness of Fit",
+      "comparison_table": "Model Comparison Table",
+      "metric_aic": "AIC",
+      "metric_bic": "BIC",
+      "p_value": "p-value (KS)",
+      "mtbf": "Estimated MTBF",
+      "std_dev": "Std Dev",
+      "sample_size": "Sample Size",
+      "failures_count": "Failures Count",
+      "restoration_factor": "Restoration Factor",
+      "legends_display": "Fit Parameters",
+      "ar": "ar (Base Corrective Efficiency)",
+      "ap": "ap (Base Preventive Efficiency)",
+      "br": "br (Temporal Corrective Dep)",
+      "bp": "bp (Temporal Preventive Dep)",
+      "beta": "Beta (Shape)",
+      "eta": "Eta (Scale)"
     }
   }
 }

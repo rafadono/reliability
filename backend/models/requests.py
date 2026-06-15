@@ -69,3 +69,20 @@ class ConditionalReliabilityRequest(WeibullFitRequest):
     mission_time: float = Field(
         ..., description="The duration of the future mission to evaluate"
     )
+
+
+class CriticalityRequest(AnalysisRequest):
+    metric_x: str = Field("count", description="X-axis metric: 'count' or 'probability'")
+
+
+class KijimaFitRequest(BaseModel):
+    equipment: Optional[str] = None
+    failure_type: Optional[str] = None
+    failure_mode: Optional[str] = None
+    censored_failure_types: Optional[List[str]] = Field(
+        None, description="List of failure types to consider as censored (preventive)"
+    )
+    types_to_fit: Optional[List[str]] = Field(
+        None, description="List of failure types to fit"
+    )
+

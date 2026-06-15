@@ -21,9 +21,9 @@ def ks_test_weibull_pit(x, beta, eta):
     return kstest(F, "uniform")
 
 
-def ks_test_kijima_pit(x, delta, beta, eta, ar, ap, model_type):
+def ks_test_kijima_pit(x, delta, beta, eta, ar, ap, model_type, br=0.0, bp=0.0):
     x = np.sort(x)
-    V = calculate_virtual_age(x, delta, ar, ap, model_type)
+    V = calculate_virtual_age(x, delta, ar, ap, model_type, br, bp)
     # Conditional PIT
     S = np.exp((V[-1] / eta) ** beta - ((V[-1] + x) / eta) ** beta)
     F = 1 - S
