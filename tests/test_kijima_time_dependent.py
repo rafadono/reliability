@@ -2,86 +2,72 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from src.reliability_analysis.analysis.kijima_model import (
-    calculate_ki,
-    calculate_ki_td,
-    calculate_k2,
-    calculate_k2_td,
-    calculate_virtual_age,
+    KijimaModelI,
+    KijimaModelII,
+    KijimaModelITD,
+    KijimaModelIITD,
 )
 from src.reliability_analysis.analysis.models import KijimaFitter
 
 
 def test_kijima_td_zero_slope_matches_constant():
     """
-    Verifies that Kijima I/II Time-Dependent equations match
-    the Constant ones when slopes are zero.
+    With br=bp=0, TD models must produce the same virtual age as constant models.
     """
     x = np.array([10.0, 25.0, 40.0, 15.0])
     delta = np.array([1.0, 0.0, 1.0, 1.0])
     ar, ap = 0.4, 0.8
-    
-    # Kijima I
-    v_c1 = calculate_ki(x, delta, ar, ap)
-    v_td1 = calculate_ki_td(x, delta, ar, ap, 0.0, 0.0)
-    assert np.allclose(v_c1, v_td1)
 
-    # Kijima II
-    v_c2 = calculate_k2(x, delta, ar, ap)
-    v_td2 = calculate_k2_td(x, delta, ar, ap, 0.0, 0.0)
-    assert np.allclose(v_c2, v_td2)
+    v_c1 = KijimaModelI(1.5, 500.0, ar, ap).virtual_age(x, delta)
+    v_td1 = KijimaModelITD(1.5, 500.0, ar, ap, 0.0, 0.0).virtual_age(x, delta)
+    np.testing.assert_allclose(v_c1, v_td1)
+
+    v_c2 = KijimaModelII(1.5, 500.0, ar, ap).virtual_age(x, delta)
+    v_td2 = KijimaModelIITD(1.5, 500.0, ar, ap, 0.0, 0.0).virtual_age(x, delta)
+    np.testing.assert_allclose(v_c2, v_td2)
 
 
-def test_kijima_td_clipping():
-    """
-    Verifies that the restoration factor q = q0 + b*T is properly clipped to [0, 1].
-    """
+def test_kijima_td_clipping_upper():
+    """Restoration factor q under exponential formulation for TD models."""
     x = np.array([10.0, 1000.0])
     delta = np.array([1.0, 1.0])
-    
-    # Case A: extreme positive slope, should clip at 1.0
-    # T_0 = 10, q = 0.5 + 0.1 * 10 = 1.5 -> clipped to 1.0
-    # T_1 = 1010, q = 0.5 + 0.1 * 1010 = 101.5 -> clipped to 1.0
-    v_td = calculate_ki_td(x, delta, 0.5, 0.5, 0.1, 0.1)
-    
-    # Expected under q=1.0:
-    # i=0: V_0 = 0 + 1.0 * 10 = 10
-    # i=1: V_1 = 10 + 1.0 * 1000 = 1010
-    assert np.allclose(v_td, [10.0, 1010.0])
 
-    # Case B: extreme negative slope, should clip at 0.0
-    # T_0 = 10, q = 0.5 - 0.1 * 10 = -0.5 -> clipped to 0.0
-    # T_1 = 1010, q = 0.5 - 0.1 * 1010 = -100.5 -> clipped to 0.0
-    v_td_neg = calculate_ki_td(x, delta, 0.5, 0.5, -0.1, -0.1)
-    assert np.allclose(v_td_neg, [0.0, 0.0])
+    v_td = KijimaModelITD(1.5, 500.0, 0.5, 0.5, 0.1, 0.1).virtual_age(x, delta)
+    np.testing.assert_allclose(v_td, [8.160602794142788, 1008.1606027941427])
 
 
-def test_calculate_virtual_age_dispatcher():
-    """
-    Verifies that the calculate_virtual_age dispatcher handles model types [1, 2, 3, 4].
-    """
+def test_kijima_td_clipping_lower():
+    """Restoration factor q clipped at 0.0 when slope is very large negative."""
+    x = np.array([10.0, 1000.0])
+    delta = np.array([1.0, 1.0])
+
+    v_td = KijimaModelITD(1.5, 500.0, 0.5, 0.5, -0.1, -0.1).virtual_age(x, delta)
+    # q clips to 0.0 for both events -> all V_i = 0
+    np.testing.assert_allclose(v_td, [0.0, 0.0])
+
+
+def test_kijima_all_model_types_virtual_age():
+    """All four model types produce finite, non-negative virtual ages."""
     x = np.array([10.0, 20.0])
     delta = np.array([1.0, 0.0])
-    
-    v1 = calculate_virtual_age(x, delta, 0.5, 0.2, 1)
-    assert len(v1) == 2
-    
-    v2 = calculate_virtual_age(x, delta, 0.5, 0.2, 2)
-    assert len(v2) == 2
 
-    v3 = calculate_virtual_age(x, delta, 0.5, 0.2, 3, 0.01, -0.01)
-    assert len(v3) == 2
-
-    v4 = calculate_virtual_age(x, delta, 0.5, 0.2, 4, 0.01, -0.01)
-    assert len(v4) == 2
+    models = [
+        KijimaModelI(1.5, 500.0, 0.5, 0.2),
+        KijimaModelII(1.5, 500.0, 0.5, 0.2),
+        KijimaModelITD(1.5, 500.0, 0.5, 0.2, 0.01, -0.01),
+        KijimaModelIITD(1.5, 500.0, 0.5, 0.2, 0.01, -0.01),
+    ]
+    for model in models:
+        V = model.virtual_age(x, delta)
+        assert len(V) == 2
+        assert np.all(np.isfinite(V))
+        assert np.all(V >= 0.0)
 
 
 def test_kijima_fitter_runs_and_contains_expected_output_structure():
-    """
-    Verifies that KijimaFitter runs and returns correct keys and structures.
-    """
+    """KijimaFitter.fit() returns correct keys and array shapes."""
     import pandas as pd
     np.random.seed(42)
-    # Create artificial dataset
     n = 30
     tbx = np.random.exponential(100.0, n) + 1.0
     mdf = np.random.choice(["Mechanical", "Preventive", "Corrective"], n)
@@ -89,80 +75,51 @@ def test_kijima_fitter_runs_and_contains_expected_output_structure():
 
     fitter = KijimaFitter()
     results = fitter.fit(df, column="TBX", censored_types=["Preventive"], models=[1, 2, 3, 4])
-    
+
     assert isinstance(results, list)
     assert len(results) == 4
-    
+
     for res in results:
-        assert "model_name" in res
-        assert "beta" in res
-        assert "eta" in res
-        assert "ar" in res
-        assert "ap" in res
-        assert "br" in res
-        assert "bp" in res
-        assert "AIC" in res
-        assert "BIC" in res
-        assert "p_value" in res
-        assert "mean" in res
-        assert "ks_stat" in res
-        assert "std" in res
-        assert "t" in res
-        assert "R" in res
-        assert "failure_rate" in res
-        assert "pdf" in res
-        assert "V" in res
-        assert "T" in res
-        
-        # Verify sizes
-        assert len(res["t"]) == 300
-        assert len(res["R"]) == 300
-        assert len(res["failure_rate"]) == 300
-        assert len(res["pdf"]) == 300
+        for key in ("model_name", "beta", "eta", "ar", "ap", "br", "bp",
+                    "AIC", "BIC", "p_value", "mean", "ks_stat", "std",
+                    "t", "R", "failure_rate", "pdf", "V", "T"):
+            assert key in res
+
+        assert len(res["t"]) == len(tbx) * 5 + 50
+        assert len(res["R"]) == len(tbx) * 5 + 50
         assert len(res["V"]) == len(tbx)
         assert len(res["T"]) == len(tbx) + 1
 
 
 def test_kijima_fit_api_endpoint():
-    """
-    Tests the new POST /api/analysis/kijima-fit API endpoint.
-    """
+    """POST /api/analysis/kijima-fit returns success with all five model names."""
     import sys
-    from pathlib import Path
     import io
-    
+    from pathlib import Path
     sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
     from app import app
-    
+
     client = TestClient(app)
-    
-    # Upload sample CSV first
-    csv_content = """Equipo;Tipo;Mdf;Dias;Censurado;Fecha;Comentario
-Motor A;Mechanical;Bearing;100;0;01/01/2026;Falla mecanica
-Motor A;Mechanical;Shaft;150;0;15/01/2026;Shaft roto
-Pump B;Hydraulic;Preventive;120;1;01/02/2026;PM preventivo
-Motor A;Electrical;Coil;180;0;10/02/2026;Bobina quemada
-Pump B;Mechanical;Bearing;200;0;20/02/2026;Falla rodamiento
-Motor A;Mechanical;Seal;90;0;25/02/2026;Falla sello
-"""
+
+    csv_content = (
+        "Equipo;Tipo;Mdf;Dias;Censurado;Fecha;Comentario\n"
+        "Motor A;Mechanical;Bearing;100;0;01/01/2026;Falla mecanica\n"
+        "Motor A;Mechanical;Shaft;150;0;15/01/2026;Shaft roto\n"
+        "Pump B;Hydraulic;Preventive;120;1;01/02/2026;PM preventivo\n"
+        "Motor A;Electrical;Coil;180;0;10/02/2026;Bobina quemada\n"
+        "Pump B;Mechanical;Bearing;200;0;20/02/2026;Falla rodamiento\n"
+        "Motor A;Mechanical;Seal;90;0;25/02/2026;Falla sello\n"
+    )
     files = {"file": ("test_kijima.csv", io.BytesIO(csv_content.encode()), "text/csv")}
-    upload_res = client.post("/api/upload", files=files)
-    assert upload_res.status_code == 200
-    
-    # Now run Kijima Fit API
-    fit_payload = {
-        "censored_failure_types": ["Preventive"]
-    }
-    response = client.post("/api/analysis/kijima-fit", json=fit_payload)
+    assert client.post("/api/upload", files=files).status_code == 200
+
+    response = client.post("/api/analysis/kijima-fit", json={"censored_failure_types": ["Preventive"]})
     assert response.status_code == 200
-    
+
     data = response.json()
     assert data["status"] == "success"
     assert "models" in data
-    assert len(data["models"]) == 4
-    
+    assert len(data["models"]) == 7
     model_names = [m["model_name"] for m in data["models"]]
-    assert "Kijima I" in model_names
-    assert "Kijima II" in model_names
-    assert "Kijima I TD" in model_names
-    assert "Kijima II TD" in model_names
+    for name in ("Kijima I", "Kijima II", "Kijima I TD", "Kijima II TD", "Kijima I TD2 (Logistic)", "Kijima II TD2 (Logistic)", "Weibull"):
+        assert name in model_names

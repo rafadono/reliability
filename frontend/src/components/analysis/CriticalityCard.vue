@@ -11,7 +11,7 @@
             {{ isCollapsed ? $t('charts.expand') + ' ⌄' : $t('charts.collapse') + ' ⌃' }}
           </button>
         </div>
-        <p class="text-sm text-gray-550 dark:text-slate-400">{{ $t('charts.criticality.desc') }}</p>
+        <p class="text-sm text-gray-500 dark:text-slate-400">{{ $t('charts.criticality.desc') }}</p>
       </div>
       <div class="flex flex-wrap items-center gap-2 bg-gray-50 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
         <button 
@@ -36,15 +36,15 @@
         <strong class="block mb-0.5">{{ $t('charts.criticality.high_risk') }}</strong>
         {{ $t('charts.criticality.high_risk_desc') }}
       </div>
-      <div class="bg-orange-50 dark:bg-orange-950/20 p-2.5 rounded text-orange-800 dark:text-orange-355 border border-orange-100 dark:border-orange-900/30">
+      <div class="bg-orange-50 dark:bg-orange-950/20 p-2.5 rounded text-orange-800 dark:text-orange-400 border border-orange-100 dark:border-orange-900/30">
         <strong class="block mb-0.5">{{ $t('charts.criticality.high_consequence') }}</strong>
         {{ $t('charts.criticality.high_consequence_desc') }}
       </div>
-      <div class="bg-yellow-50 dark:bg-yellow-950/20 p-2.5 rounded text-yellow-800 dark:text-yellow-355 border border-yellow-100 dark:border-yellow-900/30">
+      <div class="bg-yellow-50 dark:bg-yellow-950/20 p-2.5 rounded text-yellow-800 dark:text-yellow-400 border border-yellow-100 dark:border-yellow-900/30">
         <strong class="block mb-0.5">{{ $t('charts.criticality.high_frequency') }}</strong>
         {{ $t('charts.criticality.high_frequency_desc') }}
       </div>
-      <div class="bg-green-50 dark:bg-green-950/20 p-2.5 rounded text-green-800 dark:text-green-355 border border-green-100 dark:border-green-900/30">
+      <div class="bg-green-50 dark:bg-green-950/20 p-2.5 rounded text-green-800 dark:text-green-400 border border-green-100 dark:border-green-900/30">
         <strong class="block mb-0.5">{{ $t('charts.criticality.low_risk') }}</strong>
         {{ $t('charts.criticality.low_risk_desc') }}
       </div>
@@ -86,12 +86,12 @@
     <ChartCriticality v-if="criticalityData" :data="criticalityData" :scaleX="scaleX" :scaleY="scaleY" :metricX="metricX" />
 
     <!-- Classified Region Tables -->
-    <div v-if="classifiedRegions" class="mt-6 border-t border-gray-150 dark:border-slate-700 pt-4">
+    <div v-if="classifiedRegions" class="mt-6 border-t border-gray-200 dark:border-slate-700 pt-4">
       <div class="flex justify-between items-center mb-3">
         <h3 class="text-sm font-bold text-gray-900 dark:text-white">{{ $t('charts.jackknife.class_details') }}</h3>
         <button 
           @click="showTableDetails = !showTableDetails"
-          class="text-xs font-semibold px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-355 transition-colors"
+          class="text-xs font-semibold px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 transition-colors"
         >
           {{ showTableDetails ? $t('charts.jackknife.hide_tables') + ' ⌃' : $t('charts.jackknife.show_tables') + ' ⌄' }}
         </button>
@@ -157,7 +157,7 @@
         </div>
 
         <!-- High Frequency Table -->
-        <div class="rounded border border-yellow-250 dark:border-yellow-900/40 overflow-hidden text-xs">
+        <div class="rounded border border-yellow-300 dark:border-yellow-900/40 overflow-hidden text-xs">
           <div class="bg-yellow-100/80 dark:bg-yellow-950/30 px-3 py-2 font-semibold text-yellow-900 dark:text-yellow-300 flex justify-between">
             <span>{{ $t('charts.criticality.high_frequency_table') }}</span>
             <span>{{ $t('charts.jackknife.count') }} {{ classifiedRegions.highFrequency.length }}</span>

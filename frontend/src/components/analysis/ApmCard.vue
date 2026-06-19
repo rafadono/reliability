@@ -3,22 +3,33 @@
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
       <div>
         <div class="flex items-center gap-2">
-          <h2 class="text-xl font-bold text-gray-900 dark:text-white">APM: Bad Actors & Reliability Growth</h2>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ $t('charts.apm.title') }}</h2>
           <button 
             @click="isCollapsed = !isCollapsed"
             class="text-xs font-semibold px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 transition-colors"
           >
-            {{ isCollapsed ? 'Expand ⌄' : 'Collapse ⌃' }}
+            {{ isCollapsed ? $t('charts.expand') + ' ⌄' : $t('charts.collapse') + ' ⌃' }}
           </button>
         </div>
-        <p class="text-sm text-gray-500 dark:text-slate-400">Asset Management Metrics and Crow-AMSAA/Nelson-Aalen Trend</p>
+        <p class="text-sm text-gray-500 dark:text-slate-400">{{ $t('charts.apm.desc') }}</p>
       </div>
       <div class="flex gap-2 bg-gray-50 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
         <select v-model="localFilters.equipment" class="text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500">
-          <option value="">All Equipment</option>
+          <option value="">{{ $t('charts.kpi.all_equip') }}</option>
           <option v-for="eq in availableEquipment" :key="eq" :value="eq">{{ eq }}</option>
         </select>
-        <button @click="loadAnalysis" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Update</button>
+        <button @click="loadAnalysis" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">{{ $t('charts.apm.update') }}</button>
+      </div>
+    </div>
+
+    <!-- Checkbox selector for types -->
+    <div v-show="!isCollapsed" class="flex flex-wrap gap-4 items-center mb-6 p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg border border-gray-200 dark:border-slate-700 text-sm">
+      <span class="font-semibold text-gray-700 dark:text-slate-300">Tipos de Detención para MTBF:</span>
+      <div class="flex flex-wrap gap-3">
+        <label v-for="t in availableTypes" :key="t" class="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" :value="t" v-model="selectedTypes" @change="loadAnalysis" class="rounded text-blue-600 focus:ring-blue-500" />
+          <span class="text-gray-700 dark:text-slate-300">{{ t }}</span>
+        </label>
       </div>
     </div>
 
@@ -28,11 +39,11 @@
         <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700 text-sm">
           <thead class="bg-gray-50 dark:bg-slate-900/40">
             <tr>
-              <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-slate-300">Equipment/Type</th>
-              <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-300">Failures</th>
-              <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-300">MTTR (h)</th>
-              <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-300">MTBF (h)</th>
-              <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-300">Availability</th>
+              <th class="px-4 py-3 text-left font-semibold text-gray-700 dark:text-slate-300">{{ $t('charts.apm.equip_type') }}</th>
+              <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-300">{{ $t('charts.apm.failures') }}</th>
+              <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-300">{{ $t('charts.apm.mttr') }}</th>
+              <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-300">{{ $t('charts.apm.mtbf') }}</th>
+              <th class="px-4 py-3 text-right font-semibold text-gray-700 dark:text-slate-300">{{ $t('charts.apm.availability') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-slate-700">
@@ -48,7 +59,7 @@
               </td>
             </tr>
             <tr v-if="!badActorsData || badActorsData.length === 0">
-              <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-slate-400">No data available</td>
+              <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-slate-400">{{ $t('charts.apm.no_data') }}</td>
             </tr>
           </tbody>
         </table>
@@ -56,8 +67,8 @@
 
       <!-- Growth Chart -->
       <div class="bg-white dark:bg-slate-800 p-4 rounded border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col">
-        <h3 class="font-bold text-gray-800 dark:text-white mb-1">Reliability Growth (Cumulative Failures)</h3>
-        <p class="text-xs text-gray-500 dark:text-slate-400 mb-2">Upward curve = Accelerating wear-out. Straight line = Random.</p>
+        <h3 class="font-bold text-gray-800 dark:text-white mb-1">{{ $t('charts.apm.growth_title') }}</h3>
+        <p class="text-xs text-gray-500 dark:text-slate-400 mb-2">{{ $t('charts.apm.growth_desc') }}</p>
         <div class="flex-1 min-h-[250px] relative"><canvas ref="growthChartRef"></canvas></div>
       </div>
     </div>
@@ -65,28 +76,40 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { apiService } from '../../api'
 import { Chart } from 'chart.js/auto'
 
-defineProps({
-  availableEquipment: Array
+const { t } = useI18n()
+
+const props = defineProps({
+  availableEquipment: Array,
+  availableTypes: Array
 })
 
 const isCollapsed = ref(false)
 
 const localFilters = ref({ equipment: '' })
+const selectedTypes = ref([])
 const badActorsData = ref([])
 const growthChartRef = ref(null)
 let growthChartInstance = null
+
+watch(() => props.availableTypes, (newVal) => {
+  if (newVal && newVal.length > 0 && selectedTypes.value.length === 0) {
+    selectedTypes.value = [...newVal]
+  }
+}, { immediate: true })
 
 const loadAnalysis = async () => {
   try {
     await apiService.setFilters(localFilters.value.equipment)
     
+    const targetTypes = selectedTypes.value.length > 0 ? selectedTypes.value : null
     const [badActorsRes, growthRes] = await Promise.all([
-      apiService.getBadActors(undefined, undefined, 'equipment'),
-      apiService.getGrowthAnalysis(undefined, undefined)
+      apiService.getBadActors(undefined, undefined, 'equipment', targetTypes),
+      apiService.getGrowthAnalysis(undefined, undefined, targetTypes)
     ])
     
     badActorsData.value = badActorsRes.data.bad_actors || []
@@ -116,7 +139,7 @@ const renderGrowthChart = (data) => {
     type: 'line',
     data: {
       datasets: [{
-        label: 'Cumulative Failures',
+        label: t('charts.apm.cum_failures'),
         data: chartData,
         borderColor: '#059669', backgroundColor: 'rgba(5, 150, 105, 0.1)', fill: true,
         stepped: true,
@@ -134,12 +157,12 @@ const renderGrowthChart = (data) => {
           type: 'linear',
           ticks: { color: textColor },
           grid: { color: gridColor },
-          title: { display: true, text: 'Cumulative Time (Uptime)', color: textColor }
+          title: { display: true, text: t('charts.apm.cum_time'), color: textColor }
         },
         y: {
           ticks: { color: textColor },
           grid: { color: gridColor },
-          title: { display: true, text: 'Cumulative Failures', color: textColor },
+          title: { display: true, text: t('charts.apm.cum_failures'), color: textColor },
           beginAtZero: true
         }
       }

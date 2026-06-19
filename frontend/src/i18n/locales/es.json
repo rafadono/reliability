@@ -21,6 +21,8 @@
     "jackknife": "Diagrama Jackknife",
     "criticality": "Matriz de Criticidad",
     "weibull": "Ajuste Weibull",
+    "kijima": "Análisis de Kijima",
+    "weibull_kijima": "Confiabilidad y Kijima",
     "proactive": "Mantenimiento Proactivo",
     "timeline": "Línea de Tiempo",
     "bad_actors": "Peores Actores (APM)",
@@ -44,8 +46,8 @@
   },
   "charts": {
     "jackknife": {
-      "title": "Jackknife de Mantenimiento",
-      "desc": "Gráfico de Dispersión de Frecuencia vs Tiempo de Inactividad",
+      "title": "Diagrama Jackknife",
+      "desc": "Priorice el mantenimiento según la frecuencia de fallas y la duración del tiempo de inactividad.",
       "show_guide": "Mostrar Guía de Regiones",
       "hide_guide": "Ocultar Guía",
       "acute_chronic": "Agudo y Crónico (Arriba Der.)",
@@ -108,9 +110,10 @@
       "prob_failure": "Probabilidad de Fallo (%)"
     },
     "weibull": {
-      "title": "Análisis de Weibull y Proactivo",
-      "reliability": "Confiabilidad (TBX)",
-      "maintainability": "Mantenibilidad (TTX)",
+      "title": "Ajuste de Distribución de Confiabilidad",
+      "desc": "Ajusta datos de vida útil a distribuciones estadísticas para entender el comportamiento de fallas (desgaste, aleatorio, mortalidad infantil).",
+      "reliability": "Confiabilidad",
+      "maintainability": "Mantenibilidad",
       "refit": "Ajustar Curva",
       "types_to_fit": "Tipos a Ajustar",
       "censored_types": "Tipos Censurados",
@@ -133,7 +136,12 @@
       "target_age": "Edad Objetivo (T₂)",
       "calc_mission": "Calcular Éxito de Misión",
       "calc_error": "Error de Cálculo",
-      "success_prob": "Probabilidad de Éxito:"
+      "success_prob": "Probabilidad de Éxito:",
+      "loading": "Ajustando modelos...",
+      "time": "Tiempo (Días/Horas)",
+      "hazard": "Tasa de Fallas h(t)",
+      "pdf": "Densidad de Probabilidad f(t)",
+      "cdf": "Probabilidad Acumulada F(t)"
     },
     "collapse": "Ocultar",
     "expand": "Expandir",
@@ -151,25 +159,23 @@
       "vital": "Pocos Vitales (80%)",
       "trivial": "Muchos Triviales (20%)"
     },
-    "weibull": {
-      "title": "Ajuste de Distribución de Confiabilidad",
-      "desc": "Ajusta datos de vida útil a distribuciones estadísticas para entender el comportamiento de fallas (desgaste, aleatorio, mortalidad infantil).",
-      "loading": "Ajustando modelos...",
-      "time": "Tiempo (Días/Horas)",
-      "reliability": "Confiabilidad R(t)",
-      "hazard": "Tasa de Fallas h(t)",
-      "pdf": "Densidad de Probabilidad f(t)",
-      "cdf": "Probabilidad Acumulada F(t)"
-    },
     "kpi": {
       "title": "Tendencias KPI (Mensual)",
       "desc": "Monitorea métricas de rendimiento de mantenimiento a lo largo del tiempo.",
-      "metric_failures": "Fallas",
-      "metric_mtbf": "MTBF",
-      "metric_availability": "Disponibilidad",
+      "metric_failures": "Conteo de Fallas",
+      "metric_downtime": "Tiempo de Inactividad Total (hrs)",
+      "metric_mtbf": "MTBF (hrs)",
+      "metric_mttr": "MTTR (hrs)",
+      "metric_availability": "Disponibilidad (%)",
       "month": "Mes",
       "value": "Valor",
-      "availability_perc": "Disponibilidad (%)"
+      "availability_perc": "Disponibilidad (%)",
+      "kpi_label": "KPI:",
+      "asset_label": "Activo:",
+      "all_equip": "Todos los Equipos",
+      "update": "Actualizar",
+      "loading": "Cargando datos históricos...",
+      "no_data": "No hay registros de fallas que coincidan con los filtros activos."
     },
     "nlp": {
       "title": "Análisis de Inteligencia Artificial (IA)",
@@ -194,7 +200,27 @@
       "top_types": "Tipos Principales:",
       "top_modes": "Modos Principales:",
       "no_comments": "No se encontraron comentarios en los datos bajo los filtros activos.",
-      "model": "Modelo:"
+      "model": "Modelo:",
+      "model_label": "Modelo:",
+      "not_downloaded": "(No descargado)",
+      "download_and_analyze": "Descargar y Analizar",
+      "execution_error": "Error durante la ejecución",
+      "download_warning_title": "Atención:",
+      "download_warning_desc": "El modelo de IA seleccionado no se encuentra en el disco duro. Si presionas 'Descargar y Analizar', el sistema descargará aproximadamente ~350MB. Esto puede tardar varios minutos dependiendo de tu conexión. Una vez completado, el modelo quedará guardado localmente de forma permanente.",
+      "phase1": "Fase 1/2: Descargando Modelos...",
+      "phase1_desc": "Descargando la Inteligencia Artificial de Hugging Face al disco duro local. Este paso solo ocurre una vez. Por favor, no recargues la página.",
+      "phase2": "Fase 2/2: Analizando Comentarios",
+      "phase2_desc": "Dependiendo de tu cantidad de registros (miles), el análisis profundo mediante IA puede tardar entre 5 a 20 minutos sin tarjeta gráfica. El sistema está trabajando, por favor no recargues la página.",
+      "bg_working": "Trabajando en segundo plano... Analizando modelo {index} de {total}:",
+      "comparative_tab": "Comparativa 📊",
+      "comparative_title": "Métricas de Comparación Cruzada",
+      "comparative_desc": "Esta sección compara los resultados obtenidos por los modelos analizados. La tasa de coincidencia indica el porcentaje de comentarios clasificados bajo la misma categoría semántica.",
+      "agreement_rate": "Tasa de Coincidencia",
+      "processing_times": "Tiempos de Procesamiento",
+      "matches_label": "{matches} / {total} coincidencias",
+      "not_analyzed": "Este modelo aún no ha sido analizado.",
+      "click_to_download_analyze": "Presiona aquí para descargar y analizar {tab}",
+      "all_models": "Todos los modelos"
     },
     "kijima": {
       "title": "Modelos Imperfectos de Kijima (GRP)",
@@ -206,6 +232,8 @@
       "k2_c": "Kijima II (Constante)",
       "k1_td": "Kijima I (Dep. Tiempo)",
       "k2_td": "Kijima II (Dep. Tiempo)",
+      "k1_td2": "Kijima I TD2 (Logística)",
+      "k2_td2": "Kijima II TD2 (Logística)",
       "virtual_age": "Edad Virtual vs Tiempo Calendario",
       "parameters": "Parámetros",
       "constants": "Constantes",
@@ -225,7 +253,41 @@
       "br": "br (Dep. Temporal Correctiva)",
       "bp": "bp (Dep. Temporal Preventiva)",
       "beta": "Beta (Forma)",
-      "eta": "Eta (Escala)"
+      "eta": "Eta (Escala)",
+      "no_repair_baseline": "Sin Reparación (V(t) = t)",
+      "cum_calendar_time": "Tiempo Calendario Acumulado",
+      "virtual_age_y_axis": "Edad Virtual V(t)",
+      "show_baseline": "Línea Base No Reparar (V(t) = t)",
+      "mtbf_note": "El MTBF Estimado corresponde a la media teórica de la distribución ajustada y puede diferir del MTBF histórico/aritmético debido a la asimetría de la distribución (por ejemplo, cuando beta es muy diferente de 1).",
+      "min_tbx_label": "Umbral Mínimo TBX (h)",
+      "intervals_details_title": "Detalle de Intervalos a Ajustar (TBF)"
+    },
+    "event_plot": {
+      "color_by": "Color Por",
+      "by_type": "Tipo de Detención",
+      "by_equipment": "Equipo",
+      "height": "Altura",
+      "h_small": "Chico (400px)",
+      "h_medium": "Mediano (600px)",
+      "h_large": "Grande (900px)",
+      "h_xl": "Muy Grande (1200px)",
+      "bar_spacing": "Grosor de Barra",
+      "category_spacing": "Espaciado de Categoría"
+    },
+    "apm": {
+      "title": "APM: Peores Actores y Crecimiento de Confiabilidad",
+      "desc": "Métricas de Gestión de Activos y Tendencia Crow-AMSAA/Nelson-Aalen",
+      "equip_type": "Equipo/Tipo",
+      "failures": "Fallas",
+      "mttr": "MTTR (h)",
+      "mtbf": "MTBF (h)",
+      "availability": "Disponibilidad",
+      "no_data": "No hay datos disponibles",
+      "growth_title": "Crecimiento de Confiabilidad (Fallas Acumuladas)",
+      "growth_desc": "Curva hacia arriba = Desgaste acelerado. Línea recta = Aleatorio.",
+      "cum_failures": "Fallas Acumuladas",
+      "cum_time": "Tiempo Acumulado (Uptime)",
+      "update": "Actualizar"
     }
   }
 }

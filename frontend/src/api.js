@@ -72,37 +72,43 @@ export const apiService = {
     })
   },
 
-  fitData(equipment, failureType, typesToFit = null, censoredFailureTypes = null, targetColumn = 'TBX') {
+  fitData(equipment, failureType, typesToFit = null, censoredFailureTypes = null, targetColumn = 'TBX', minTbx = 0.0, excludedIndices = null) {
     return api.post('/analysis/fit', {
       equipment,
       failure_type: failureType,
       types_to_fit: typesToFit,
       censored_failure_types: censoredFailureTypes,
-      target_column: targetColumn
+      target_column: targetColumn,
+      min_tbx: minTbx,
+      excluded_indices: excludedIndices
     })
   },
 
-  fitKijima(equipment, failureType, typesToFit = null, censoredFailureTypes = null) {
+  fitKijima(equipment, failureType, typesToFit = null, censoredFailureTypes = null, minTbx = 0.0, excludedIndices = null) {
     return api.post('/analysis/kijima-fit', {
       equipment,
       failure_type: failureType,
       types_to_fit: typesToFit,
-      censored_failure_types: censoredFailureTypes
+      censored_failure_types: censoredFailureTypes,
+      min_tbx: minTbx,
+      excluded_indices: excludedIndices
     })
   },
 
-  getBadActors(equipment, failureType, compareBy = 'equipment') {
+  getBadActors(equipment, failureType, compareBy = 'equipment', typesToUse = null) {
     return api.post('/analysis/bad-actors', {
       equipment,
       failure_type: failureType,
-      compare_by: compareBy
+      compare_by: compareBy,
+      types_to_use: typesToUse
     })
   },
 
-  getGrowthAnalysis(equipment, failureType) {
+  getGrowthAnalysis(equipment, failureType, typesToUse = null) {
     return api.post('/analysis/growth', {
       equipment,
-      failure_type: failureType
+      failure_type: failureType,
+      types_to_use: typesToUse
     })
   },
 
@@ -129,10 +135,11 @@ export const apiService = {
     })
   },
 
-  getKpiTrend(equipment, failureType) {
+  getKpiTrend(equipment, failureType, typesToUse = null) {
     return api.post('/analysis/kpi-trend', {
       equipment,
-      failure_type: failureType
+      failure_type: failureType,
+      types_to_use: typesToUse
     })
   },
 

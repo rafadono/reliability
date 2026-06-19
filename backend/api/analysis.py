@@ -19,6 +19,7 @@ from models.requests import (
     ConditionalReliabilityRequest,
     CriticalityRequest,
     KijimaFitRequest,
+    KpiTrendRequest,
 )
 from src.reliability_analysis.analysis.pareto import ParetoAnalyzer
 from src.reliability_analysis.analysis.models import ReliabilityFitter, KijimaFitter
@@ -285,7 +286,12 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
         data = state.filter_manager.get_filtered_data()
 
         if req.types_to_fit:
-            data = data[data["Type"].isin(req.types_to_fit)]
+            all_types = list(req.types_to_fit)
+            if req.censored_failure_types:
+                for t in req.censored_failure_types:
+                    if t not in all_types:
+                        all_types.append(t)
+            data = data[data["Type"].isin(all_types)]
 
         if data.empty:
             return {
@@ -309,7 +315,51 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
         if target_col in fit_data.columns and target_col != "TBX":
             fit_data["TBX"] = fit_data[target_col]
 
-        fitter = ReliabilityFitter(fit_data)
+        min_tbx = float(req.min_tbx) if req.min_tbx is not None else 0.0
+        excluded_idxs = req.excluded_indices or []
+
+        # Build the intervals list for output
+        intervals_df = fit_data[fit_data["TBX"] >= 0.0].copy()
+        if "Start_Date" in intervals_df.columns:
+            intervals_df = intervals_df.sort_values("Start_Date")
+        
+        intervals_list = []
+        active_idx = 1
+        indices_to_drop = []
+        for i, (orig_idx, row) in enumerate(intervals_df.iterrows()):
+            tbx_val = float(row["TBX"])
+            is_baseline_start = (i == 0)
+            
+            is_manually_excluded = False
+            if not is_baseline_start:
+                is_manually_excluded = (active_idx in excluded_idxs)
+                
+            is_included = (tbx_val >= min_tbx) and (tbx_val > 0.0) and not is_baseline_start and not is_manually_excluded
+            if is_manually_excluded:
+                indices_to_drop.append(orig_idx)
+            
+            date_str = str(row["Start_Date"]) if "Start_Date" in row and pd.notnull(row["Start_Date"]) else "-"
+            type_val = str(row["Type"]) if "Type" in row else "-"
+            mode_val = str(row["mdf"]) if "mdf" in row else "-"
+            
+            intervals_list.append({
+                "index": active_idx,
+                "date": date_str,
+                "tbx": tbx_val,
+                "type": type_val,
+                "mode": mode_val,
+                "included": is_included,
+                "is_baseline": is_baseline_start,
+                "manually_excluded": is_manually_excluded
+            })
+            if not is_baseline_start:
+                active_idx += 1
+
+        # Filter the fit dataset for actual Weibull fitting
+        fit_data_for_fit = fit_data.drop(index=indices_to_drop)
+        fit_data_for_fit = fit_data_for_fit[(fit_data_for_fit["TBX"] >= min_tbx) & (fit_data_for_fit["TBX"] > 0)].copy()
+
+        fitter = ReliabilityFitter(fit_data_for_fit)
         results = fitter.fit_weibull(
             column=target_col, censored_failure_types=req.censored_failure_types
         )
@@ -319,6 +369,7 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
                 "status": "error",
                 "message": "Could not fit Weibull distribution",
                 "parameters": None,
+                "intervals": intervals_list,
             }
 
         curve_data = None
@@ -328,8 +379,8 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
             if results.get("beta") and results.get("eta"):
                 dist = Weibull_Distribution(alpha=results["eta"], beta=results["beta"])
                 t_max = (
-                    float(fit_data["TBX"].max())
-                    if "TBX" in fit_data.columns
+                    float(fit_data_for_fit["TBX"].max())
+                    if "TBX" in fit_data_for_fit.columns
                     else 1000.0
                 )
                 times = np.linspace(1e-3, t_max * 1.2, 100)
@@ -347,17 +398,21 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
         return {
             "status": "success",
             "parameters": {
-                "beta": float(results["beta"]),
-                "eta": float(results["eta"]),
+                "beta": float(results["beta"]) if results.get("beta") is not None else None,
+                "eta": float(results["eta"]) if results.get("eta") is not None else None,
             },
             "goodness_of_fit": {
-                "aic": float(results.get("aic")),
-                "bic": float(results.get("bic")),
+                "aic": float(results.get("aic")) if results.get("aic") is not None else None,
+                "bic": float(results.get("bic")) if results.get("bic") is not None else None,
+                "p_value": float(results.get("p_value")) if results.get("p_value") is not None else None,
+                "ks_stat": float(results.get("ks_stat")) if results.get("ks_stat") is not None else None,
             },
+            "mtbf": float(results.get("mtbf")) if results.get("mtbf") is not None else None,
             "reliability_curve": curve_data,
-            "sample_size": len(data),
+            "sample_size": len(fit_data_for_fit),
             "failures_count": results.get("failures_count"),
             "censored_count": results.get("censored_count"),
+            "intervals": intervals_list,
         }
     except Exception as e:
         logger.error(f"Fit analysis error: {str(e)}")
@@ -371,6 +426,8 @@ async def bad_actors_analysis(req: AnalysisRequest) -> Dict[str, Any]:
 
     try:
         data = state.filter_manager.get_filtered_data()
+        if req.types_to_use:
+            data = data[data["Type"].isin(req.types_to_use)]
         if data.empty:
             return {"status": "warning", "bad_actors": []}
 
@@ -390,7 +447,8 @@ async def bad_actors_analysis(req: AnalysisRequest) -> Dict[str, Any]:
             uptime = float(group[uptime_col].sum()) if uptime_col else 0.0
 
             mttr = downtime / failures if failures > 0 else 0.0
-            mtbf = uptime / failures if failures > 0 else 0.0
+            failures_mtbf = int((group[uptime_col] > 0).sum()) if uptime_col else failures
+            mtbf = uptime / failures_mtbf if failures_mtbf > 0 else 0.0
             availability = (
                 (uptime / (uptime + downtime)) * 100 if (uptime + downtime) > 0 else 0.0
             )
@@ -420,6 +478,8 @@ async def reliability_growth(req: AnalysisRequest) -> Dict[str, Any]:
 
     try:
         data = state.filter_manager.get_filtered_data()
+        if req.types_to_use:
+            data = data[data["Type"].isin(req.types_to_use)]
         if data.empty:
             return {
                 "status": "warning",
@@ -606,59 +666,114 @@ async def conditional_reliability(req: ConditionalReliabilityRequest) -> Dict[st
 
 
 @router.post("/analysis/kpi-trend", tags=["Analysis"])
-async def kpi_trend(req: AnalysisRequest) -> Dict[str, Any]:
-    if state.filter_manager is None:
+async def kpi_trend(req: KpiTrendRequest) -> Dict[str, Any]:
+    if state.current_data is None:
         raise HTTPException(status_code=400, detail="No data loaded")
 
     try:
-        data = state.filter_manager.get_filtered_data()
-        if data.empty:
-            return {"status": "success", "trend": []}
-
-        if "Start_Date" not in data.columns:
+        df = state.current_data.copy()
+        
+        # Apply failure type filter if provided
+        if req.failure_type:
+            df = df[df["Type"] == req.failure_type]
+            
+        if req.types_to_use:
+            df = df[df["Type"].isin(req.types_to_use)]
+            
+        if "Start_Date" not in df.columns:
             raise HTTPException(
                 status_code=400,
                 detail="Dataset must contain datetime start column (Start_Date).",
             )
 
-        df = data.copy()
         df = df.dropna(subset=["Start_Date"])
         if df.empty:
-            return {"status": "success", "trend": []}
+            return {"status": "success", "trend": [], "trends": {}, "months": []}
 
         df["month_period"] = df["Start_Date"].dt.to_period("M")
+        all_months = sorted(df["month_period"].unique())
 
-        grouped = df.groupby("month_period")
-        trend_data = []
+        # Determine target equipments
+        available_eqs = sorted(df["Equipment"].dropna().unique().tolist())
+        req_equipment = req.equipment
+        if isinstance(req_equipment, str):
+            req_equipment = [req_equipment] if req_equipment else []
+        target_eqs = req_equipment if (req_equipment and len(req_equipment) > 0) else available_eqs
 
-        for period in sorted(grouped.groups.keys()):
-            group = grouped.get_group(period)
+        # Calculate trends
+        trends = {}
+        
+        # 1. Global (of the selected equipments)
+        df_selected = df[df["Equipment"].isin(target_eqs)] if target_eqs else df
+        grouped_global = df_selected.groupby("month_period")
+        global_data = []
+        for month in all_months:
+            if month in grouped_global.groups:
+                group = grouped_global.get_group(month)
+                failures = int(len(group))
+                downtime = float(group["TTX"].sum()) if "TTX" in group.columns else 0.0
+                uptime = float(group["TBX"].sum()) if "TBX" in group.columns else 0.0
+                failures_mtbf = int((group["TBX"] > 0).sum()) if "TBX" in group.columns else failures
+                mtbf = float(uptime / failures_mtbf) if failures_mtbf > 0 else 0.0
+                mttr = float(downtime / failures) if failures > 0 else 0.0
+                total_time = uptime + downtime
+                availability = float((uptime / total_time) * 100.0) if total_time > 0.0 else 0.0
+            else:
+                failures = 0
+                downtime = 0.0
+                uptime = 0.0
+                mtbf = 0.0
+                mttr = 0.0
+                availability = 100.0
+            global_data.append({
+                "month": str(month),
+                "failures": failures,
+                "downtime": downtime,
+                "mtbf": mtbf,
+                "mttr": mttr,
+                "availability": availability
+            })
+        trends["Global"] = global_data
 
-            failures = int(len(group))
-            downtime = float(group["TTX"].sum()) if "TTX" in group.columns else 0.0
-            uptime = float(group["TBX"].sum()) if "TBX" in group.columns else 0.0
-
-            mtbf = float(uptime / failures) if failures > 0 else 0.0
-            mttr = float(downtime / failures) if failures > 0 else 0.0
-
-            total_time = uptime + downtime
-            availability = (
-                float((uptime / total_time) * 100.0) if total_time > 0.0 else 0.0
-            )
-
-            trend_data.append(
-                {
-                    "month": str(period),
+        # 2. Per Equipment
+        for eq in target_eqs:
+            eq_df = df[df["Equipment"] == eq]
+            grouped_eq = eq_df.groupby("month_period")
+            eq_data = []
+            for month in all_months:
+                if month in grouped_eq.groups:
+                    group = grouped_eq.get_group(month)
+                    failures = int(len(group))
+                    downtime = float(group["TTX"].sum()) if "TTX" in group.columns else 0.0
+                    uptime = float(group["TBX"].sum()) if "TBX" in group.columns else 0.0
+                    failures_mtbf = int((group["TBX"] > 0).sum()) if "TBX" in group.columns else failures
+                    mtbf = float(uptime / failures_mtbf) if failures_mtbf > 0 else 0.0
+                    mttr = float(downtime / failures) if failures > 0 else 0.0
+                    total_time = uptime + downtime
+                    availability = float((uptime / total_time) * 100.0) if total_time > 0.0 else 0.0
+                else:
+                    failures = 0
+                    downtime = 0.0
+                    uptime = 0.0
+                    mtbf = 0.0
+                    mttr = 0.0
+                    availability = 100.0
+                eq_data.append({
+                    "month": str(month),
                     "failures": failures,
                     "downtime": downtime,
-                    "uptime": uptime,
                     "mtbf": mtbf,
                     "mttr": mttr,
-                    "availability": availability,
-                }
-            )
+                    "availability": availability
+                })
+            trends[str(eq)] = eq_data
 
-        return {"status": "success", "trend": trend_data}
+        return {
+            "status": "success",
+            "trend": global_data,
+            "trends": trends,
+            "months": [str(m) for m in all_months]
+        }
     except Exception as e:
         logger.error(f"KPI trend analysis error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -1260,7 +1375,12 @@ async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
         data = state.filter_manager.get_filtered_data()
 
         if req.types_to_fit:
-            data = data[data["Type"].isin(req.types_to_fit)]
+            all_types = list(req.types_to_fit)
+            if req.censored_failure_types:
+                for t in req.censored_failure_types:
+                    if t not in all_types:
+                        all_types.append(t)
+            data = data[data["Type"].isin(all_types)]
 
         if data.empty:
             return {
@@ -1282,36 +1402,127 @@ async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
             raise HTTPException(status_code=400, detail="No time-between-failures (TBX) column found in the dataset.")
 
         censored_types = req.censored_failure_types or []
+        min_tbx = float(req.min_tbx) if req.min_tbx is not None else 0.0
+        excluded_idxs = req.excluded_indices or []
+
+        # Build the intervals list for output
+        intervals_df = fit_data[fit_data["TBX"] >= 0.0].copy()
+        if "Start_Date" in intervals_df.columns:
+            intervals_df = intervals_df.sort_values("Start_Date")
+        
+        intervals_list = []
+        active_idx = 1
+        indices_to_drop = []
+        for i, (orig_idx, row) in enumerate(intervals_df.iterrows()):
+            tbx_val = float(row["TBX"])
+            is_baseline_start = (i == 0)
+            
+            is_manually_excluded = False
+            if not is_baseline_start:
+                is_manually_excluded = (active_idx in excluded_idxs)
+                
+            is_included = (tbx_val >= min_tbx) and (tbx_val > 0.0) and not is_baseline_start and not is_manually_excluded
+            if is_manually_excluded:
+                indices_to_drop.append(orig_idx)
+            
+            date_str = str(row["Start_Date"]) if "Start_Date" in row and pd.notnull(row["Start_Date"]) else "-"
+            type_val = str(row["Type"]) if "Type" in row else "-"
+            mode_val = str(row["mdf"]) if "mdf" in row else "-"
+            
+            intervals_list.append({
+                "index": active_idx,
+                "date": date_str,
+                "tbx": tbx_val,
+                "type": type_val,
+                "mode": mode_val,
+                "included": is_included,
+                "is_baseline": is_baseline_start,
+                "manually_excluded": is_manually_excluded
+            })
+            if not is_baseline_start:
+                active_idx += 1
+
+        # Filter the fit dataset for Kijima fitting (must have TBX >= min_tbx)
+        fit_data_for_fit = fit_data.drop(index=indices_to_drop)
+        fit_data_for_fit = fit_data_for_fit[(fit_data_for_fit["TBX"] >= min_tbx) & (fit_data_for_fit["TBX"] > 0)].copy()
 
         fitter = KijimaFitter()
         results = fitter.fit(
-            dataframe=fit_data,
+            dataframe=fit_data_for_fit,
             column="TBX",
             censored_types=censored_types,
-            models=[1, 2, 3, 4],
+            models=[1, 2, 3, 4, 5, 6],
         )
 
         if isinstance(results, dict):
             results = [results]
 
+        # Append Weibull baseline model
+        try:
+            w_fitter = ReliabilityFitter(fit_data_for_fit)
+            w_res = w_fitter.fit_weibull(column="TBX", censored_failure_types=censored_types)
+            if w_res and "beta" in w_res and "eta" in w_res:
+                w_beta = w_res["beta"]
+                w_eta = w_res["eta"]
+
+                from src.reliability_analysis.analysis.kijima_model import KijimaModelI
+                w_model = KijimaModelI(w_beta, w_eta, 0.0, 0.0)
+
+                df_prep = fit_data_for_fit.dropna(subset=["TBX", "Type" if "Type" in fit_data_for_fit.columns else "mdf"]).copy()
+                df_prep = df_prep[df_prep["TBX"] > 0]
+                x_arr = df_prep["TBX"].to_numpy(dtype=float)
+                col_name = "Type" if "Type" in df_prep.columns else "mdf"
+                delta_arr = (~df_prep[col_name].isin(censored_types)).astype(float).to_numpy()
+
+                w_curves = w_model.calculate_curves(x_arr, delta_arr)
+
+                weibull_baseline = {
+                    "model_name": "Weibull",
+                    "beta": w_beta,
+                    "eta": w_eta,
+                    "ar": 0.0,
+                    "ap": 0.0,
+                    "br": 0.0,
+                    "bp": 0.0,
+                    "AIC": w_res.get("aic"),
+                    "BIC": w_res.get("bic"),
+                    "p_value": w_res.get("p_value"),
+                    "mean": w_res.get("mtbf"),
+                    "ks_stat": w_res.get("ks_stat"),
+                    "std": 0.0,
+                }
+                weibull_baseline.update(w_curves)
+                results.append(weibull_baseline)
+        except Exception as ex:
+            logger.warning(f"Could not compute Weibull GRP baseline: {ex}")
+
+        import math
+
+        def sanitize_value(v):
+            if isinstance(v, (float, np.floating)):
+                v = float(v)
+                if math.isnan(v) or math.isinf(v):
+                    return None
+                return v
+            if isinstance(v, (int, np.integer)):
+                return int(v)
+            if isinstance(v, np.ndarray):
+                return [sanitize_value(x) for x in v.tolist()]
+            if isinstance(v, list):
+                return [sanitize_value(x) for x in v]
+            if isinstance(v, dict):
+                return {k2: sanitize_value(v2) for k2, v2 in v.items()}
+            return v
+
         serialized_results = []
         for res in results:
-            serialized_res = {}
-            for k, v in res.items():
-                if isinstance(v, np.ndarray):
-                    serialized_res[k] = v.tolist()
-                elif isinstance(v, (np.float32, np.float64)):
-                    serialized_res[k] = float(v)
-                elif isinstance(v, (np.int32, np.int64)):
-                    serialized_res[k] = int(v)
-                else:
-                    serialized_res[k] = v
-            serialized_results.append(serialized_res)
+            serialized_results.append({k: sanitize_value(v) for k, v in res.items()})
 
         return {
             "status": "success",
             "models": serialized_results,
-            "sample_size": len(fit_data),
+            "sample_size": len(fit_data_for_fit),
+            "intervals": intervals_list,
         }
     except Exception as e:
         logger.error(f"Kijima fit analysis error: {str(e)}\n{traceback.format_exc()}")

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Union
 
 
 class UploadResponse(BaseModel):
@@ -51,6 +51,14 @@ class WeibullFitRequest(BaseModel):
         "TBX",
         description="Column to fit (TBX for Reliability, TTX for Maintainability)",
     )
+    min_tbx: Optional[float] = Field(
+        0.0,
+        description="Minimum TBX (hours) to include in fit"
+    )
+    excluded_indices: Optional[List[int]] = Field(
+        None,
+        description="List of 1-based indices of intervals to exclude from fit"
+    )
 
 
 class OptimalPMRequest(WeibullFitRequest):
@@ -84,5 +92,21 @@ class KijimaFitRequest(BaseModel):
     )
     types_to_fit: Optional[List[str]] = Field(
         None, description="List of failure types to fit"
+    )
+    min_tbx: Optional[float] = Field(
+        0.0,
+        description="Minimum TBX (hours) to include in fit"
+    )
+    excluded_indices: Optional[List[int]] = Field(
+        None,
+        description="List of 1-based indices of intervals to exclude from fit"
+    )
+
+
+class KpiTrendRequest(BaseModel):
+    equipment: Optional[Union[str, List[str]]] = None
+    failure_type: Optional[str] = None
+    types_to_use: Optional[List[str]] = Field(
+        None, description="List of types to include in the analysis"
     )
 

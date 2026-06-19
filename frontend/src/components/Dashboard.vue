@@ -16,23 +16,17 @@
 
       <CriticalityCard id="criticality-card" :available-equipment="availableEquipment" />
 
-      <WeibullCard 
-        id="weibull-card"
-        :available-equipment="availableEquipment" 
-        :available-types="availableTypes" 
-      />
-
-      <KijimaCard 
-        id="kijima-card"
+      <WeibullKijimaCard 
+        id="weibull-kijima-card"
         :available-equipment="availableEquipment" 
         :available-types="availableTypes" 
       />
 
       <EventPlotCard id="event-plot-card" :available-equipment="availableEquipment" />
 
-      <ApmCard id="apm-card" :available-equipment="availableEquipment" />
+      <ApmCard id="apm-card" :available-equipment="availableEquipment" :available-types="availableTypes" />
 
-      <TrendCard id="trend-card" :available-equipment="availableEquipment" />
+      <TrendCard id="trend-card" :available-equipment="availableEquipment" :available-types="availableTypes" />
 
       <AiAnalysisCard id="ai-card" />
     </div>
@@ -47,8 +41,7 @@ import { apiService } from '../api'
 import ParetoCard from './analysis/ParetoCard.vue'
 import JackknifeCard from './analysis/JackknifeCard.vue'
 import CriticalityCard from './analysis/CriticalityCard.vue'
-import WeibullCard from './analysis/WeibullCard.vue'
-import KijimaCard from './analysis/KijimaCard.vue'
+import WeibullKijimaCard from './analysis/WeibullKijimaCard.vue'
 import EventPlotCard from './analysis/EventPlotCard.vue'
 import ApmCard from './analysis/ApmCard.vue'
 import TrendCard from './analysis/TrendCard.vue'

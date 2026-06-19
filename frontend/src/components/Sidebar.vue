@@ -57,10 +57,10 @@
           </li>
           <li>
             <button 
-              @click="scrollToCard('weibull-card')" 
+              @click="scrollToCard('weibull-kijima-card')" 
               class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
             >
-              {{ $t('sidebar.weibull') }}
+              {{ $t('sidebar.weibull_kijima') }}
             </button>
           </li>
           <li>
@@ -164,7 +164,7 @@ const scrollToCard = (id) => {
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   } else if (id === 'proactive-pm-section') {
-    const wEl = document.getElementById('weibull-card')
+    const wEl = document.getElementById('weibull-kijima-card')
     if (wEl) {
       wEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }

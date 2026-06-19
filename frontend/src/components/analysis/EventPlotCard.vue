@@ -28,7 +28,7 @@
           
           <div 
             v-show="isOpen"
-            class="absolute left-0 mt-1 w-64 bg-white dark:bg-slate-800 border border-gray-350 dark:border-slate-700 rounded shadow-lg max-h-60 overflow-y-auto z-50 p-2 space-y-1 text-sm text-gray-950 dark:text-slate-100"
+            class="absolute left-0 mt-1 w-64 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded shadow-lg max-h-60 overflow-y-auto z-50 p-2 space-y-1 text-sm text-gray-950 dark:text-slate-100"
           >
             <div class="flex justify-between items-center pb-1.5 mb-1.5 border-b border-gray-200 dark:border-slate-700">
               <button 
@@ -93,11 +93,67 @@
             class="w-16 text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500"
           >
         </div>
+        <div class="flex items-center gap-1">
+          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">{{ $t('charts.event_plot.color_by') }}:</span>
+          <select 
+            v-model="colorMode"
+            class="text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500 py-1"
+          >
+            <option value="type">{{ $t('charts.event_plot.by_type') }}</option>
+            <option value="equipment">{{ $t('charts.event_plot.by_equipment') }}</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">{{ $t('charts.event_plot.height') }}:</span>
+          <select 
+            v-model.number="chartHeight"
+            class="text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500 py-1"
+          >
+            <option :value="400">{{ $t('charts.event_plot.h_small') }}</option>
+            <option :value="600">{{ $t('charts.event_plot.h_medium') }}</option>
+            <option :value="900">{{ $t('charts.event_plot.h_large') }}</option>
+            <option :value="1200">{{ $t('charts.event_plot.h_xl') }}</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">{{ $t('charts.event_plot.bar_spacing') }}:</span>
+          <input 
+            type="range" 
+            v-model.number="barPercentage" 
+            min="0.1" 
+            max="1.0" 
+            step="0.05"
+            class="w-20 accent-blue-600 cursor-pointer"
+          >
+          <span class="text-xs text-gray-500 dark:text-slate-400 w-8 text-right">{{ barPercentage }}</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">{{ $t('charts.event_plot.category_spacing') }}:</span>
+          <input 
+            type="range" 
+            v-model.number="categoryPercentage" 
+            min="0.1" 
+            max="1.0" 
+            step="0.05"
+            class="w-20 accent-blue-600 cursor-pointer"
+          >
+          <span class="text-xs text-gray-500 dark:text-slate-400 w-8 text-right">{{ categoryPercentage }}</span>
+        </div>
         <button @click="loadAnalysis" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Update</button>
       </div>
     </div>
     <div v-show="!isCollapsed">
-      <ChartEventPlot v-if="filteredEventPlotData" :data="filteredEventPlotData" :date-from="localFilters.dateFrom" :date-to="localFilters.dateTo" :min-duration="minDuration" />
+      <ChartEventPlot 
+        v-if="filteredEventPlotData" 
+        :data="filteredEventPlotData" 
+        :date-from="localFilters.dateFrom" 
+        :date-to="localFilters.dateTo" 
+        :min-duration="minDuration"
+        :color-mode="colorMode"
+        :chart-height="chartHeight"
+        :bar-percentage="barPercentage"
+        :category-percentage="categoryPercentage"
+      />
     </div>
   </div>
 </template>
@@ -115,6 +171,11 @@ const isCollapsed = ref(false)
 const isOpen = ref(false)
 const dropdownEl = ref(null)
 const selectedEquipments = ref([])
+
+const colorMode = ref('type')
+const chartHeight = ref(400)
+const barPercentage = ref(0.6)
+const categoryPercentage = ref(0.8)
 
 const localFilters = ref({ dateFrom: '', dateTo: '' })
 const minDuration = ref(0.1)

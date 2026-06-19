@@ -49,7 +49,7 @@ EXCLUDED_MODELS = [
     "Beta_2P",
 ]
 
-KIJIMA_MODELS = [1, 2, 3, 4]  # Kijima I, II, I TD, and II TD
+KIJIMA_MODELS = [1, 2, 3, 4, 5, 6]  # Kijima I, II, I TD, II TD, I TD2 (Logistic), II TD2 (Logistic)
 
 PLOT_WIDTH = 1000
 PLOT_HEIGHT = 600

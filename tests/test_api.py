@@ -152,3 +152,24 @@ class TestAPIEndpoints:
             assert "category" in legacy_results["categories"][0]
             assert "top_types" in legacy_results["categories"][0]
             assert "top_modes" in legacy_results["categories"][0]
+
+    def test_fit_analysis(self, client: TestClient):
+        """Test Weibull Fit endpoint exposes MTBF & KS metrics."""
+        response = client.post(
+            "/api/analysis/fit",
+            json={
+                "target_column": "Days",
+                "censored_failure_types": []
+            }
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert "parameters" in data
+        assert "beta" in data["parameters"]
+        assert "eta" in data["parameters"]
+        assert "goodness_of_fit" in data
+        assert "p_value" in data["goodness_of_fit"]
+        assert "ks_stat" in data["goodness_of_fit"]
+        assert "mtbf" in data
+        assert data["mtbf"] is not None

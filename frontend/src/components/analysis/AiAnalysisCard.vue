@@ -11,7 +11,7 @@
             {{ isCollapsed ? $t('charts.expand') + ' ⌄' : $t('charts.collapse') + ' ⌃' }}
           </button>
         </div>
-        <p class="text-sm text-gray-550 dark:text-slate-400">{{ $t('charts.nlp.desc') }}</p>
+        <p class="text-sm text-gray-500 dark:text-slate-400">{{ $t('charts.nlp.desc') }}</p>
       </div>
 
       <div class="flex flex-wrap items-center gap-3 bg-gray-50 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
@@ -28,18 +28,9 @@
           </select>
         </div>
 
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input 
-            type="checkbox" 
-            v-model="isEnabled" 
-            class="rounded text-indigo-600 focus:ring-indigo-500" 
-          />
-          <span class="text-sm font-semibold text-gray-700 dark:text-slate-350">{{ $t('charts.nlp.enable') }}</span>
-        </label>
-        
         <button 
           @click="loadMiningData" 
-          :disabled="!isEnabled || loadingState !== 'idle'"
+          :disabled="loadingState !== 'idle'"
           class="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <template v-if="loadingState !== 'idle'">
@@ -73,17 +64,7 @@
     </div>
 
     <div v-show="!isCollapsed">
-      <div v-if="!isEnabled" class="text-center py-8 bg-gray-50/50 dark:bg-slate-900/30 rounded-lg border border-dashed border-gray-200 dark:border-slate-800">
-        <p class="text-sm text-gray-500 dark:text-slate-400 mb-2">{{ $t('charts.nlp.mining_disabled') }}</p>
-        <button 
-          @click="isEnabled = true; loadMiningData()" 
-          class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
-        >
-          {{ $t('charts.nlp.click_enable') }}
-        </button>
-      </div>
-
-      <div v-else-if="!isSelectedModelDownloaded && loadingState === 'idle'" class="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500 p-4 mb-6 rounded shadow-sm">
+      <div v-if="!isSelectedModelDownloaded && loadingState === 'idle'" class="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500 p-4 mb-6 rounded shadow-sm">
         <div class="flex">
           <div class="flex-shrink-0">
             <svg class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
@@ -185,10 +166,10 @@
 
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Tasa de Coincidencia (Agreement Rate) -->
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-gray-200 dark:border-slate-750 shadow-sm">
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
               <h4 class="font-bold text-gray-900 dark:text-white mb-4">Tasa de Coincidencia</h4>
               <div class="space-y-4">
-                <div v-for="metric in comparisonMetrics" :key="`${metric.modelA}-${metric.modelB}`" class="p-3.5 bg-gray-50 dark:bg-slate-900/40 rounded-lg border border-gray-150/40 dark:border-slate-700/50 space-y-2">
+                <div v-for="metric in comparisonMetrics" :key="`${metric.modelA}-${metric.modelB}`" class="p-3.5 bg-gray-50 dark:bg-slate-900/40 rounded-lg border border-gray-200/40 dark:border-slate-700/50 space-y-2">
                   <div class="flex justify-between items-center text-xs text-gray-500 dark:text-slate-400 font-semibold">
                     <span class="truncate max-w-[40%]">{{ metric.modelA }}</span>
                     <span class="text-gray-400">vs</span>
@@ -196,7 +177,7 @@
                   </div>
                   <div class="flex justify-between items-end">
                     <span class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ metric.agreementRate.toFixed(1) }}%</span>
-                    <span class="text-xs text-gray-555 dark:text-slate-400 font-semibold">{{ metric.matches }} / {{ metric.total }} coincidencias</span>
+                    <span class="text-xs text-gray-500 dark:text-slate-400 font-semibold">{{ metric.matches }} / {{ metric.total }} coincidencias</span>
                   </div>
                   <div class="w-full bg-gray-100 dark:bg-slate-900 rounded-full h-2">
                     <div 
@@ -209,15 +190,15 @@
             </div>
 
             <!-- Tiempos de Procesamiento -->
-            <div class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-gray-200 dark:border-slate-750 shadow-sm flex flex-col">
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col">
               <h4 class="font-bold text-gray-900 dark:text-white mb-4">Tiempos de Procesamiento</h4>
               <div class="space-y-4 my-auto">
                 <div v-for="modelName in analyzedModelNames" :key="modelName" class="space-y-1">
-                  <div class="flex justify-between text-xs font-semibold text-gray-700 dark:text-slate-350">
+                  <div class="flex justify-between text-xs font-semibold text-gray-700 dark:text-slate-300">
                     <span class="truncate max-w-[70%]">{{ modelName }}</span>
-                    <span class="font-bold text-amber-600 dark:text-amber-450">{{ getExecutionTimeForModel(modelName) }}s</span>
+                    <span class="font-bold text-amber-500 dark:text-amber-500">{{ getExecutionTimeForModel(modelName) }}s</span>
                   </div>
-                  <div class="w-full bg-gray-150 dark:bg-slate-900 rounded-full h-2">
+                  <div class="w-full bg-gray-200 dark:bg-slate-900 rounded-full h-2">
                     <div 
                       class="bg-amber-500 h-2 rounded-full transition-all duration-500" 
                       :style="{ width: `${(getExecutionTimeForModel(modelName) / maxExecutionTime) * 100}%` }"
@@ -227,9 +208,9 @@
               </div>
             </div>
           </div>
-
+          
           <!-- Distribución de Categorías Comparada -->
-          <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-750 shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
             <div class="p-5 border-b border-gray-200 dark:border-slate-700/80">
               <h4 class="font-bold text-gray-900 dark:text-white">Distribución de Categorías</h4>
             </div>
@@ -248,7 +229,7 @@
                     </th>
                   </tr>
                 </thead>
-                <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-250 dark:divide-slate-700/50">
+                <tbody class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700/50">
                   <tr v-for="category in categoryList" :key="category" class="hover:bg-gray-50 dark:hover:bg-slate-700/20 transition-colors">
                     <td class="px-5 py-3.5 text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                       <span class="w-2.5 h-2.5 rounded-full" :class="getCategoryColorClass(category)"></span>
@@ -257,10 +238,10 @@
                     <td 
                       v-for="modelName in analyzedModelNames" 
                       :key="modelName" 
-                      class="px-5 py-3.5 text-sm text-gray-700 dark:text-slate-350"
+                      class="px-5 py-3.5 text-sm text-gray-700 dark:text-slate-300"
                     >
                       <span class="font-bold text-gray-900 dark:text-white">{{ getCategoryCountForModel(modelName, category) }}</span>
-                      <span class="text-xs text-gray-500 dark:text-slate-405 ml-1.5">
+                      <span class="text-xs text-gray-500 dark:text-slate-400 ml-1.5 font-normal">
                         ({{ ((getCategoryCountForModel(modelName, category) / miningData.total_comments) * 100).toFixed(1) }}%)
                       </span>
                     </td>
@@ -277,15 +258,15 @@
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-indigo-50 dark:bg-indigo-950/20 p-4 rounded-lg border border-indigo-100/10">
               <p class="text-xs text-gray-600 dark:text-slate-400">{{ $t('charts.nlp.found') }}</p>
-              <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-450">{{ miningData.total_comments }}</p>
+              <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-500">{{ miningData.total_comments }}</p>
             </div>
             <div class="bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-lg border border-emerald-100/10">
               <p class="text-xs text-gray-600 dark:text-slate-400">{{ $t('charts.nlp.coverage') }}</p>
-              <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-450">{{ miningData.coverage.toFixed(1) }}%</p>
+              <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-500">{{ miningData.coverage.toFixed(1) }}%</p>
             </div>
             <div class="col-span-2 bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-100/10">
               <p class="text-xs text-gray-600 dark:text-slate-400">Tiempo de Ejecución ({{ activeTab }})</p>
-              <p class="text-2xl font-bold text-amber-600 dark:text-amber-450">{{ selectedModelData.execution_time_seconds.toFixed(2) }}s</p>
+              <p class="text-2xl font-bold text-amber-600 dark:text-amber-500">{{ selectedModelData.execution_time_seconds.toFixed(2) }}s</p>
             </div>
           </div>
 
@@ -295,7 +276,7 @@
               <h3 class="font-bold text-gray-800 dark:text-white mb-4">{{ $t('charts.nlp.top_keywords') }}</h3>
               <div class="space-y-3">
                 <div v-for="item in selectedModelData.keywords" :key="item.word" class="space-y-1">
-                  <div class="flex justify-between text-xs font-semibold text-gray-700 dark:text-slate-350">
+                  <div class="flex justify-between text-xs font-semibold text-gray-700 dark:text-slate-300">
                     <span class="capitalize">{{ item.word }}</span>
                     <span>{{ item.count }} {{ $t('charts.nlp.occurrences') }}</span>
                   </div>
@@ -313,23 +294,23 @@
             <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm">
               <h3 class="font-bold text-gray-800 dark:text-white mb-4">{{ $t('charts.nlp.categories') }}</h3>
               <div class="space-y-3">
-                <div v-for="cat in selectedModelData.categories" :key="cat.category" class="p-3 bg-gray-50/50 dark:bg-slate-900/30 rounded border border-gray-150/40 dark:border-slate-700/50">
+                <div v-for="cat in selectedModelData.categories" :key="cat.category" class="p-3 bg-gray-50/50 dark:bg-slate-900/30 rounded border border-gray-200/40 dark:border-slate-700/50">
                   <div class="flex items-center justify-between mb-1.5">
                     <div class="flex items-center gap-2">
                       <div class="w-2.5 h-2.5 rounded-full" :class="getCategoryColorClass(cat.category)"></div>
-                      <span class="text-sm font-semibold text-gray-850 dark:text-slate-200">{{ translateCategory(cat.category) }}</span>
+                      <span class="text-sm font-semibold text-gray-800 dark:text-slate-200">{{ translateCategory(cat.category) }}</span>
                     </div>
                     <span class="text-xs font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-slate-900 px-2 py-0.5 rounded">
                       {{ cat.count }} {{ $t('charts.nlp.logs') }}
                     </span>
                   </div>
-                  <div v-if="cat.count > 0" class="text-xs text-gray-500 dark:text-slate-405 space-y-1.5 pl-4.5 border-l border-gray-200 dark:border-slate-700 ml-1.5 mt-1.5">
+                  <div v-if="cat.count > 0" class="text-xs text-gray-500 dark:text-slate-400 space-y-1.5 pl-4.5 border-l border-gray-200 dark:border-slate-700 ml-1.5 mt-1.5">
                     <div>
-                      <span class="text-gray-650 dark:text-slate-450 font-medium">{{ $t('charts.nlp.top_types') }}</span> 
+                      <span class="text-gray-600 dark:text-slate-400 font-medium">{{ $t('charts.nlp.top_types') }}</span> 
                       <span class="ml-1 text-gray-800 dark:text-slate-300 font-semibold">{{ cat.top_types.filter(t => t && t !== 'nan' && t !== 'Unknown').join(', ') || 'N/A' }}</span>
                     </div>
                     <div>
-                      <span class="text-gray-650 dark:text-slate-450 font-medium">{{ $t('charts.nlp.top_modes') }}</span> 
+                      <span class="text-gray-600 dark:text-slate-400 font-medium">{{ $t('charts.nlp.top_modes') }}</span> 
                       <span class="ml-1 text-gray-800 dark:text-slate-300 font-semibold">{{ cat.top_modes.filter(m => m && m !== 'nan' && m !== 'Unknown').join(', ') || 'N/A' }}</span>
                     </div>
                   </div>
@@ -344,7 +325,7 @@
           <p class="text-sm text-gray-500 dark:text-slate-400 mb-2">Este modelo aún no ha sido analizado.</p>
           <button 
             @click="selectedModel = activeTab; loadMiningData()" 
-            class="text-xs font-bold text-indigo-600 dark:text-indigo-450 hover:underline"
+            class="text-xs font-bold text-indigo-600 dark:text-indigo-500 hover:underline"
           >
             Presiona aquí para descargar y analizar {{ activeTab }}
           </button>
@@ -365,7 +346,7 @@ import { apiService } from '../../api'
 
 const { t } = useI18n()
 const isCollapsed = ref(false)
-const isEnabled = ref(false)
+const isEnabled = ref(true)
 const loadingState = ref('idle')
 const errorMessage = ref('')
 const miningData = ref(null)
@@ -398,14 +379,21 @@ onMounted(async () => {
         size_mb: Math.round(res.data.models.reduce((sum, m) => sum + (m.downloaded ? m.size_mb : 0), 0))
       })
 
-      if (modelStatusList.value.length > 0) {
-        selectedModel.value = modelStatusList.value[0].name
+      const legacyModel = modelStatusList.value.find(m => m.name === 'Legacy Keyword NLP')
+      if (legacyModel) {
+        selectedModel.value = legacyModel.name
+        activeTab.value = legacyModel.name
+      } else {
+        if (modelStatusList.value.length > 0) {
+          selectedModel.value = modelStatusList.value[0].name
+        }
+        const firstModel = modelStatusList.value.find(m => m.name !== 'Todos los modelos')
+        if (firstModel) {
+          activeTab.value = firstModel.name
+        }
       }
-      
-      const firstModel = modelStatusList.value.find(m => m.name !== 'Todos los modelos')
-      if (firstModel) {
-        activeTab.value = firstModel.name
-      }
+
+      await loadMiningData()
     }
   } catch (e) {
     console.error('Failed to load model status', e)

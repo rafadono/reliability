@@ -3,6 +3,7 @@ Object-oriented reliability analysis models.
 """
 
 from typing import Dict, List, Tuple, Any, Optional, Union
+from scipy.special import gamma as gamma_func
 import numpy as np
 import pandas as pd
 from reliability.Fitters import Fit_Everything
@@ -11,14 +12,18 @@ from scipy.integrate import quad
 from src.reliability_analysis.utils.logger_config import setup_logging
 from src.reliability_analysis.utils.config import EXCLUDED_MODELS, KIJIMA_MODELS
 from src.reliability_analysis.analysis.kijima_model import (
-    calculate_virtual_age,
-    reliability,
     _neg_loglik,
     _neg_loglik_td,
+    KijimaModelI,
+    KijimaModelII,
+    KijimaModelITD,
+    KijimaModelIITD,
+    KijimaModelITD2,
+    KijimaModelIITD2,
 )
 from src.reliability_analysis.analysis.metrics import (
     calculate_aic_bic,
-    ks_test_kijima_pit,
+    ks_test_weibull_pit,
 )
 
 logger = setup_logging("Models")
@@ -129,14 +134,16 @@ class ReliabilityFitter:
         failures = None
         right_censored = None
 
-        if censored_failure_types and "mdf" in df_copy.columns:
-            # Uncensored data
-            failures_mask = ~df_copy["mdf"].isin(censored_failure_types)
-            failures = df_copy[failures_mask][column].dropna().to_numpy()
+        if censored_failure_types:
+            col_to_check = "Type" if "Type" in df_copy.columns else "mdf"
+            if col_to_check in df_copy.columns:
+                # Uncensored data
+                failures_mask = ~df_copy[col_to_check].isin(censored_failure_types)
+                failures = df_copy[failures_mask][column].dropna().to_numpy()
 
-            # Censored data
-            censored_mask = df_copy["mdf"].isin(censored_failure_types)
-            right_censored = df_copy[censored_mask][column].dropna().to_numpy()
+                # Censored data
+                censored_mask = df_copy[col_to_check].isin(censored_failure_types)
+                right_censored = df_copy[censored_mask][column].dropna().to_numpy()
         else:
             # All data as uncensored
             failures = df_copy[column].dropna().to_numpy()
@@ -159,13 +166,29 @@ class ReliabilityFitter:
 
             fitter = Fit_Weibull_2P(**kwargs)
 
+            beta_val = float(fitter.beta)
+            eta_val = float(fitter.alpha)
+            mtbf = eta_val * gamma_func(1 + 1 / beta_val) if beta_val > 0 else None
+
+            ks_stat_val = None
+            ks_p_val = None
+            try:
+                ks_s, ks_p = ks_test_weibull_pit(failures, beta_val, eta_val)
+                ks_stat_val = float(ks_s)
+                ks_p_val = float(ks_p)
+            except Exception:
+                pass
+
             return {
-                "beta": float(fitter.beta),
-                "eta": float(fitter.alpha),
+                "beta": beta_val,
+                "eta": eta_val,
                 "ar": None,
                 "ap": None,
                 "aic": float(fitter.AICc) if hasattr(fitter, "AICc") else None,
                 "bic": float(fitter.BIC) if hasattr(fitter, "BIC") else None,
+                "mtbf": mtbf,
+                "ks_stat": ks_stat_val,
+                "p_value": ks_p_val,
                 "failures_count": int(len(failures)),
                 "censored_count": int(len(right_censored))
                 if right_censored is not None
@@ -174,7 +197,6 @@ class ReliabilityFitter:
         except Exception as e:
             logger.error(f"Error in Weibull fit: {str(e)}")
             return None
-
 
 class KijimaFitter:
     """
@@ -200,7 +222,7 @@ class KijimaFitter:
 
             bounds = [(1e-6, None), (1e-6, None), (1e-2, 0.99), (1e-2, 0.99)]
             initial = [1.0, x.mean(), 0.5, 0.7]
-        else:  # Time-dependent models 3 & 4
+        else:  # Time-dependent models 3, 4, 5, 6
             def objective(p):
                 return _neg_loglik_td(
                     x, delta, p[0], p[1], p[2], p[3], p[4], p[5], model_type
@@ -211,10 +233,10 @@ class KijimaFitter:
                 (1e-6, None),
                 (1e-2, 0.99),
                 (1e-2, 0.99),
-                (-10.0, 10.0),
-                (-10.0, 10.0),
+                (-0.01, 0.01),
+                (-0.01, 0.01),
             ]
-            initial = [1.0, x.mean(), 0.5, 0.7, 0.0, 0.0]
+            initial = [1.0, x.mean(), 0.5, 0.7, 0.001, 0.001]
 
         result = minimize(objective, initial, method="L-BFGS-B", bounds=bounds)
 
@@ -238,27 +260,41 @@ class KijimaFitter:
             beta, eta, ar, ap, br, bp = params
             k = 6
 
+        # Instantiate Kijima OOP Model
+        if model_type == 1:
+            model = KijimaModelI(beta, eta, ar, ap)
+        elif model_type == 2:
+            model = KijimaModelII(beta, eta, ar, ap)
+        elif model_type == 3:
+            model = KijimaModelITD(beta, eta, ar, ap, br, bp)
+        elif model_type == 4:
+            model = KijimaModelIITD(beta, eta, ar, ap, br, bp)
+        elif model_type == 5:
+            model = KijimaModelITD2(beta, eta, ar, ap, br, bp)
+        elif model_type == 6:
+            model = KijimaModelIITD2(beta, eta, ar, ap, br, bp)
+        else:
+            raise ValueError(f"Invalid model_type: {model_type}")
+
         # Virtual age
-        V = calculate_virtual_age(x, delta, ar, ap, model_type, br, bp)
+        V = model.virtual_age(x, delta)
         V_last = V[-1]
 
-        # Tests and metrics
-        ks_stat, p_val = ks_test_kijima_pit(
-            x, delta, beta, eta, ar, ap, model_type, br, bp
-        )
+        # Tests and metrics using OOP methods
+        ks_stat, p_val = model.ks_test_pit(x, delta)
         aic, bic = calculate_aic_bic(ll_max, k, x.size)
 
-        # Expected MTBF
-        mtbf, _ = quad(lambda t: reliability(t, V_last, beta, eta), 0, np.inf)
-        E2, _ = quad(lambda t: 2 * t * reliability(t, V_last, beta, eta), 0, np.inf)
-        var = E2 - mtbf**2
-        std = np.sqrt(var)
+        # Expected MTBF and std (computed analytically)
+        mtbf = model.mean(V_last)
+        std = model.std(V_last)
 
         model_name_map = {
             1: "Kijima I",
             2: "Kijima II",
             3: "Kijima I TD",
             4: "Kijima II TD",
+            5: "Kijima I TD2 (Logistic)",
+            6: "Kijima II TD2 (Logistic)",
         }
 
         return {
@@ -290,11 +326,15 @@ class KijimaFitter:
         logger.info(f"Starting Kijima fit for {column}")
 
         # Prepare data
-        df = dataframe.dropna(subset=[column, "mdf"]).copy()
+        subset_cols = [column]
+        col_to_check = "Type" if "Type" in dataframe.columns else "mdf"
+        if col_to_check in dataframe.columns:
+            subset_cols.append(col_to_check)
+        df = dataframe.dropna(subset=subset_cols).copy()
         df = df[df[column] > 0]
 
         x = df[column].to_numpy(dtype=float)
-        delta = (~df["mdf"].isin(censored_types)).astype(float).to_numpy()
+        delta = (~df[col_to_check].isin(censored_types)).astype(float).to_numpy()
 
         # Normalize input models
         models_list = models if isinstance(models, (list, tuple)) else [models]
@@ -309,41 +349,28 @@ class KijimaFitter:
             # Calculate curves
             beta, eta, ar, ap = res["beta"], res["eta"], res["ar"], res["ap"]
             br, bp = res.get("br", 0.0), res.get("bp", 0.0)
-            V = calculate_virtual_age(x, delta, ar, ap, m, br, bp)
+
+            # Instantiate Kijima OOP Model
+            if m == 1:
+                model = KijimaModelI(beta, eta, ar, ap)
+            elif m == 2:
+                model = KijimaModelII(beta, eta, ar, ap)
+            elif m == 3:
+                model = KijimaModelITD(beta, eta, ar, ap, br, bp)
+            elif m == 4:
+                model = KijimaModelIITD(beta, eta, ar, ap, br, bp)
+            elif m == 5:
+                model = KijimaModelITD2(beta, eta, ar, ap, br, bp)
+            elif m == 6:
+                model = KijimaModelIITD2(beta, eta, ar, ap, br, bp)
+            else:
+                raise ValueError(f"Invalid model_type: {m}")
+
             T = np.insert(np.cumsum(x), 0, 0.0)
             t_grid = np.linspace(0, T[-1], 300)
 
-            R = np.zeros_like(t_grid)
-            f = np.zeros_like(t_grid)
-            h = np.zeros_like(t_grid)
-
-            # Calculate by interval
-            V_full = np.insert(V, 0, 0.0)
-            for i in range(len(T) - 1):
-                mask = (t_grid >= T[i]) & (t_grid < T[i + 1])
-                t_local = t_grid[mask] - T[i]
-                V_i = V_full[i]
-
-                vt_eta = (V_i + t_local) / eta
-                v0_eta = V_i / eta
-
-                R[mask] = np.exp(v0_eta**beta - vt_eta**beta)
-                f[mask] = (beta / eta) * (vt_eta) ** (beta - 1) * R[mask]
-                h[mask] = (beta / eta) * (vt_eta) ** (beta - 1)
-
-            # Last interval
-            mask = t_grid >= T[-1]
-            t_local = t_grid[mask] - T[-1]
-            V_i = V_full[-1]
-
-            vt_eta = (V_i + t_local) / eta
-            v0_eta = V_i / eta
-
-            R[mask] = np.exp(v0_eta**beta - vt_eta**beta)
-            f[mask] = (beta / eta) * (vt_eta) ** (beta - 1) * R[mask]
-            h[mask] = (beta / eta) * (vt_eta) ** (beta - 1)
-
-            res.update({"t": t_grid, "R": R, "failure_rate": h, "pdf": f, "V": V, "T": T})
+            curves = model.calculate_curves(x, delta, t_grid)
+            res.update(curves)
 
             results.append(res)
 
