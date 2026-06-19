@@ -87,3 +87,6 @@ streamlit_logger.log
 
 # Hugging Face Cache
 huggingface_cache/
+
+# PDF Reference documents
+Modelos De Confiabilidad Kijima.pdf

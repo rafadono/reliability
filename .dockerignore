@@ -82,3 +82,6 @@ npm-debug.log
 # Data & uploads
 data/
 uploads/
+
+# PDF Reference documents
+Modelos De Confiabilidad Kijima.pdf
