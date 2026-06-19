@@ -9,15 +9,16 @@ Modern, fast reliability engineering analysis platform built with Vue 3 and Fast
 
 ## Features
 
-- **Independent Modular Filtering**: Each chart/module features its own independent filter options (equipment → type → failure mode cascade), allowing users to analyze and compare different assets and analysis types side-by-side.
+- **Independent Modular Filtering**: Each chart/module features its own independent filter options (equipment -> type -> failure mode cascade), allowing users to analyze and compare different assets and analysis types side-by-side.
 - **Pareto Analysis**: 80/20 split analysis at equipment, type, and failure mode levels.
 - **Maintenance Jackknife**: Frequency vs Total Downtime scatter plots to identify acute vs chronic issues.
 - **Criticality Matrix**: Dynamic risk matrix plotting failure probability vs average downtime (MTTR).
-- **Weibull & Proactive Analysis**: Fitting, Optimal PM Interval, and Conditional Reliability.
-- **APM Metrics**: Bad actors ranking (MTBF, MTTR, Availability) and Reliability Growth (Crow-AMSAA).
+- **Weibull & Kijima Integration**: Fit lifetime data to Weibull distributions (Reliability and Maintainability) and Kijima imperfect repair virtual age models (Kijima I & II, with constant and time-dependent/logistic variants) within a single unified view.
+- **APM Metrics**: Bad actors ranking (MTBF, MTTR, Availability) and Reliability Growth (Crow-AMSAA) with custom failure type selectors.
 - **Event Plot Timeline**: Visual failure tracking across assets over time.
 - **Interactive Dashboard**: Real-time charts and metrics.
-- **Maintainability Analysis**: Switch seamlessly between Time Between Failures (TBX) and Repair Times (TTX).
+- **Event Detail & Manual Exclusion**: Exclude individual failure events manually or filter low TBF intervals dynamically to refit Weibull and Kijima curves from a detailed, interactive table.
+- **Hugging Face Semantic Classification (AI Comment Mining)**: Zero-shot classification to categorize unstructured failure log comments into operational, mechanical, electrical, instrumentation, or cleaning causes.
 - **Report Export**: Download full interactive dashboards as high-quality A3 PDF reports.
 - **REST API**: Full-featured API with automatic documentation.
 
@@ -185,9 +186,7 @@ ruff check .
 
 The following features and functions are implemented and tested, but currently not active in the main UI/API workflow:
 - **General Distribution Fitting**: `ReliabilityFitter.fit` in `models.py` uses the `reliability` package's `Fit_Everything` to fit 10+ probability distributions. Kept for future development if non-Weibull parametric fittings are needed.
-- **Kijima Virtual Age Model**: `KijimaFitter` and `kijima_model.py` are fully implemented and tested core analytical tools, left for future API/UI integration.
 - **Unused Core Helper Functions & Metrics**: `kolmogorov_smirnov_test`, `ks_test_weibull_pit`, and `r2_mrl` in `metrics.py` are preserved as they could be useful for validation/goodness-of-fit once broader fitting algorithms are enabled.
-- **DataProcessor Helper Methods**: `get_equipment_types` and `calculate_tbf` in `data_processing.py` are kept for utility in custom script pipelines.
 
 ---
 
