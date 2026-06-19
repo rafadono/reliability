@@ -85,3 +85,6 @@ uploads/
 
 # PDF Reference documents
 Modelos De Confiabilidad Kijima.pdf
+
+# Code graph index directories
+.codegraph/
