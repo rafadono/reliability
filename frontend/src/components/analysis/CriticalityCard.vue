@@ -6,17 +6,17 @@
           <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ $t('charts.criticality.title') }}</h2>
           <button 
             @click="isCollapsed = !isCollapsed"
-            class="text-xs font-semibold px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 transition-colors"
+            class="text-xs font-semibold px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-400 transition-colors"
           >
             {{ isCollapsed ? $t('charts.expand') + ' ⌄' : $t('charts.collapse') + ' ⌃' }}
           </button>
         </div>
         <p class="text-sm text-gray-500 dark:text-slate-400">{{ $t('charts.criticality.desc') }}</p>
       </div>
-      <div class="flex flex-wrap items-center gap-2 bg-gray-50 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
+      <div class="flex flex-wrap items-center gap-2 bg-gray-50 dark:bg-slate-900 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
         <button 
           @click="showExplanation = !showExplanation"
-          class="text-xs font-semibold px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 transition-colors"
+          class="text-xs font-semibold px-2.5 py-1 rounded bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
         >
           {{ showExplanation ? $t('charts.jackknife.hide_guide') + ' ⌃' : $t('charts.jackknife.show_guide') + ' ⌄' }}
         </button>

@@ -31,7 +31,6 @@
     <div v-show="!isCollapsed">
     
     <!-- Collapsible Region Guides -->
-    <div v-show="showExplanation" class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs transition-smooth">
       <div class="bg-red-50 dark:bg-red-950/20 p-2.5 rounded text-red-800 dark:text-red-400 border border-red-100 dark:border-red-900/30">
         <strong class="block mb-0.5">{{ $t('charts.jackknife.acute_chronic') }}</strong>
         {{ $t('charts.jackknife.acute_chronic_desc') }}

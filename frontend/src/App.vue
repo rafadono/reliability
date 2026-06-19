@@ -3,17 +3,17 @@
     <nav class="bg-white dark:bg-slate-800 border-b dark:border-slate-700 shadow-sm transition-colors duration-300">
       <div class="w-full flex items-center justify-between">
         <div class="flex items-center">
-          <button v-if="dataLoaded" @click="isSidebarOpen = !isSidebarOpen" class="p-2 ml-4 mr-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors" title="Toggle Sidebar">
+          <div class="w-64 px-6 py-4 flex items-center gap-3 shrink-0">
+            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+              <span class="text-white font-bold text-lg">RA</span>
+            </div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ $t('navbar.title') }}</h1>
+          </div>
+          <button v-if="dataLoaded" @click="isSidebarOpen = !isSidebarOpen" class="p-2 ml-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors" title="Toggle Sidebar">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div class="py-4 flex items-center gap-3 shrink-0" :class="{'pl-2': dataLoaded, 'pl-6': !dataLoaded}">
-            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
-              <span class="text-white font-bold text-lg">RA</span>
-            </div>
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white whitespace-nowrap">{{ $t('navbar.title') }}</h1>
-          </div>
         </div>
         <div class="flex items-center gap-4 text-sm px-6 py-4">
           <button 
