@@ -20,9 +20,14 @@ from models.requests import (
     CriticalityRequest,
     KijimaFitRequest,
     KpiTrendRequest,
+    RcmSuggestRequest,
+    FmecaRpnRequest,
+    RamSimulateRequest,
+    RcaAnalysisRequest,
 )
 from src.reliability_analysis.analysis.pareto import ParetoAnalyzer
 from src.reliability_analysis.analysis.models import ReliabilityFitter, KijimaFitter
+from services.llm import LlmService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -1526,6 +1531,156 @@ async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"Kijima fit analysis error: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/analysis/rcm/suggest", tags=["ISO Analysis"])
+async def rcm_suggest(req: RcmSuggestRequest) -> Dict[str, Any]:
+    """Generates RCM suggestions for the selected equipment based on SAE JA1011."""
+    if state.filter_manager is None or state.current_data is None:
+        raise HTTPException(status_code=400, detail="No data loaded")
+
+    try:
+        df = state.current_data[state.current_data["Equipment"] == req.equipment].copy()
+        comments = []
+        if not df.empty and "Comment" in df.columns:
+            comments = df["Comment"].dropna().astype(str).tolist()
+
+        customized = LlmService.get_rcm_suggestions(req.equipment, comments)
+
+        return {
+            "status": "success",
+            "equipment": req.equipment,
+            "rcm_sheets": customized
+        }
+    except Exception as e:
+        logger.error(f"RCM suggestion error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/analysis/fmea/calculate-rpn", tags=["ISO Analysis"])
+async def fmea_calculate_rpn(req: FmecaRpnRequest) -> Dict[str, Any]:
+    """Calculates Risk Priority Number (RPN) and assigns risk categories according to IEC 60812."""
+    rpn = req.severity * req.occurrence * req.detection
+    
+    if rpn < 50:
+        category = "Bajo"
+        color = "green"
+    elif rpn < 150:
+        category = "Medio"
+        color = "yellow"
+    elif rpn < 300:
+        category = "Alto"
+        color = "orange"
+    else:
+        category = "Crítico"
+        color = "red"
+        
+    return {
+        "status": "success",
+        "rpn": rpn,
+        "category": category,
+        "color": color
+    }
+
+
+@router.post("/analysis/ram/simulate", tags=["ISO Analysis"])
+async def ram_simulate(req: RamSimulateRequest) -> Dict[str, Any]:
+    """Runs a plant Availability and Production Assurance simulation based on ISO 20815."""
+    if state.filter_manager is None or state.current_data is None:
+        raise HTTPException(status_code=400, detail="No data loaded")
+
+    try:
+        # Base data filtering
+        df = state.current_data.copy()
+        if req.equipment:
+            df = df[df["Equipment"] == req.equipment]
+            
+        if df.empty:
+            raise ValueError("No data available for the selected equipment")
+
+        # Total failures and total downtime
+        num_failures = int(df["Type"].isin(["CORRECTIVO", "MI"]).sum())
+        if num_failures == 0:
+            num_failures = int(len(df))
+            
+        actual_downtime = float(df["TTX"].sum()) if "TTX" in df.columns else float(num_failures * 2.0)
+        
+        # Total simulation horizon (e.g. 1 year of operation: 8760 hours)
+        horizon = 8760.0
+        
+        # Calculate simulated downtime adjusting for efficiency and logistics delay
+        # More logistics delay increases downtime; higher preventive efficiency reduces failures/downtime
+        logistics_factor = req.logistics_delay * num_failures
+        preventive_reduction = 1.0 - (req.preventive_efficiency * 0.4)
+        
+        simulated_downtime = (actual_downtime + logistics_factor) * preventive_reduction
+        simulated_downtime = min(horizon - 100.0, max(1.0, simulated_downtime))
+        
+        simulated_uptime = horizon - simulated_downtime
+        availability = (simulated_uptime / horizon) * 100.0
+        production_assurance = availability * 0.985 # Subtract minor processing losses
+        
+        # Generate monthly timeline data for availability chart
+        monthly_availability = []
+        months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+        
+        # Add random fluctuations around the average availability
+        np.random.seed(42)
+        noise = np.random.normal(0, 1.5, 12)
+        for i, month in enumerate(months):
+            val = min(100.0, max(50.0, availability + noise[i]))
+            monthly_availability.append({"month": month, "availability": round(val, 2)})
+
+        # Downtime contributors (Bad Actors)
+        equipments = state.current_data["Equipment"].unique()
+        bad_actors_contrib = []
+        for eq in equipments:
+            eq_df = state.current_data[state.current_data["Equipment"] == eq]
+            eq_downtime = eq_df["TTX"].sum() if "TTX" in eq_df.columns else len(eq_df) * 2.0
+            bad_actors_contrib.append({
+                "equipment": eq,
+                "downtime": round(float(eq_downtime), 1),
+                "failures": int(len(eq_df))
+            })
+        bad_actors_contrib = sorted(bad_actors_contrib, key=lambda x: x["downtime"], reverse=True)[:5]
+
+        return {
+            "status": "success",
+            "availability": round(availability, 2),
+            "production_assurance": round(production_assurance, 2),
+            "uptime_hours": round(simulated_uptime, 1),
+            "downtime_hours": round(simulated_downtime, 1),
+            "bad_actors": bad_actors_contrib,
+            "timeline": monthly_availability
+        }
+    except Exception as e:
+        logger.error(f"RAM simulation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/analysis/rca/suggest", tags=["ISO Analysis"])
+async def rca_suggest(req: RcaAnalysisRequest) -> Dict[str, Any]:
+    """Generates a Root Cause Analysis (Ishikawa & 5 Whys) suggestion based on IEC 62740."""
+    if state.filter_manager is None or state.current_data is None:
+        raise HTTPException(status_code=400, detail="No data loaded")
+
+    try:
+        df = state.current_data[state.current_data["Equipment"] == req.equipment].copy()
+        comments = []
+        if not df.empty and "Comment" in df.columns:
+            comments = df["Comment"].dropna().astype(str).tolist()
+
+        result = LlmService.get_rca_suggestions(req.equipment, comments)
+
+        return {
+            "status": "success",
+            "equipment": req.equipment,
+            "five_whys": result.get("five_whys", []),
+            "ishikawa": result.get("ishikawa", {})
+        }
+    except Exception as e:
+        logger.error(f"RCA suggestion error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
 

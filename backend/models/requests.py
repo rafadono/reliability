@@ -110,3 +110,24 @@ class KpiTrendRequest(BaseModel):
         None, description="List of types to include in the analysis"
     )
 
+
+class RcmSuggestRequest(BaseModel):
+    equipment: str = Field(..., description="Name of the equipment unit")
+
+
+class FmecaRpnRequest(BaseModel):
+    severity: int = Field(..., ge=1, le=10, description="Severity rating (1-10)")
+    occurrence: int = Field(..., ge=1, le=10, description="Occurrence rating (1-10)")
+    detection: int = Field(..., ge=1, le=10, description="Detection rating (1-10)")
+
+
+class RamSimulateRequest(BaseModel):
+    equipment: Optional[str] = Field(None, description="Equipment to simulate. If None, runs global plant simulation.")
+    preventive_efficiency: float = Field(0.8, ge=0.0, le=1.0, description="Efficiency of preventive maintenance (0 to 1)")
+    logistics_delay: float = Field(4.0, ge=0.0, description="Average logistics delay in hours")
+
+
+class RcaAnalysisRequest(BaseModel):
+    equipment: str = Field(..., description="Equipment name")
+    failure_event_date: Optional[str] = Field(None, description="Optional date of the failure event to analyze")
+

@@ -51,6 +51,7 @@
         @notify="showNotification"
         @reset="handleReset"
         @export-pdf="handleExportPDF"
+        @select-tab-card="handleSelectTabCard"
         :isLoading="isLoading"
       />
       <main class="flex-1 overflow-auto">
@@ -61,8 +62,10 @@
         />
         <div id="dashboard-content" class="min-h-full" v-else>
           <Dashboard 
+            ref="dashboardRef"
             :key="dashboardKey"
             :isLoading="isLoading"
+            :active-tab-prop="globalActiveTab"
             @filters-changed="handleFiltersChanged"
           />
         </div>
@@ -91,6 +94,16 @@ const notification = ref('')
 const dashboardKey = ref(0)
 const isSidebarOpen = ref(true)
 const isDarkMode = ref(false)
+
+const globalActiveTab = ref('quant')
+const dashboardRef = ref(null)
+
+const handleSelectTabCard = (data) => {
+  globalActiveTab.value = data.tabId
+  if (dashboardRef.value) {
+    dashboardRef.value.changeTabAndScroll(data.tabId, data.cardId)
+  }
+}
 
 const toggleLanguage = () => {
   locale.value = locale.value === 'es' ? 'en' : 'es'

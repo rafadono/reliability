@@ -6,6 +6,10 @@ Uses environment variables with default values.
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file automatically from root or parent directories
+load_dotenv()
 
 BASE_DIR = Path(__file__).parent.resolve()
 DATA_DIR = BASE_DIR / "data"
@@ -61,3 +65,10 @@ NLP_MODELS_TO_COMPARE = [
     "cross-encoder/nli-distilroberta-base",
     "Recognai/zeroshot_selectra_medium",
 ]
+
+# LLM configuration for Vendor-Agnostic AI Copilot
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "mock").lower()  # 'mock', 'gemini', 'openai', 'ollama'
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+LLM_MODEL = os.getenv("LLM_MODEL", "")  # e.g., 'gemini-1.5-pro', 'gpt-4o', 'llama3'

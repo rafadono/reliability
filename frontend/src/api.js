@@ -164,4 +164,27 @@ export const apiService = {
       types_to_use: modelName ? [modelName] : null
     })
   },
+
+  getRcmSuggestions(equipment) {
+    return api.post('/analysis/rcm/suggest', { equipment })
+  },
+
+  calculateFmeaRpn(severity, occurrence, detection) {
+    return api.post('/analysis/fmea/calculate-rpn', { severity, occurrence, detection })
+  },
+
+  simulateRam(equipment, preventiveEfficiency, logisticsDelay) {
+    return api.post('/analysis/ram/simulate', {
+      equipment,
+      preventive_efficiency: preventiveEfficiency,
+      logistics_delay: logisticsDelay
+    })
+  },
+
+  getRcaSuggestions(equipment, failureEventDate = null) {
+    return api.post('/analysis/rca/suggest', {
+      equipment,
+      failure_event_date: failureEventDate
+    })
+  }
 }

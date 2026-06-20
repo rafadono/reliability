@@ -173,3 +173,70 @@ class TestAPIEndpoints:
         assert "ks_stat" in data["goodness_of_fit"]
         assert "mtbf" in data
         assert data["mtbf"] is not None
+
+    def test_rcm_suggest(self, client: TestClient):
+        """Test RCM suggestion endpoint."""
+        response = client.post(
+            "/api/analysis/rcm/suggest",
+            json={"equipment": "Motor A"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert "rcm_sheets" in data
+        assert len(data["rcm_sheets"]) > 0
+        assert "function" in data["rcm_sheets"][0]
+        assert "mode" in data["rcm_sheets"][0]
+
+    def test_fmea_calculate_rpn(self, client: TestClient):
+        """Test FMEA RPN calculation according to IEC 60812."""
+        response = client.post(
+            "/api/analysis/fmea/calculate-rpn",
+            json={"severity": 8, "occurrence": 4, "detection": 3}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["rpn"] == 96
+        assert data["category"] == "Medio"
+
+        # Test critical category
+        response_crit = client.post(
+            "/api/analysis/fmea/calculate-rpn",
+            json={"severity": 10, "occurrence": 10, "detection": 3}
+        )
+        assert response_crit.json()["rpn"] == 300
+        assert response_crit.json()["category"] == "Crítico"
+
+    def test_ram_simulate(self, client: TestClient):
+        """Test RAM availability simulation according to ISO 20815."""
+        response = client.post(
+            "/api/analysis/ram/simulate",
+            json={
+                "equipment": "Motor A",
+                "preventive_efficiency": 0.8,
+                "logistics_delay": 4.0
+            }
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert "availability" in data
+        assert "production_assurance" in data
+        assert "bad_actors" in data
+        assert "timeline" in data
+
+    def test_rca_suggest(self, client: TestClient):
+        """Test RCA suggestion (Ishikawa & 5 Whys) according to IEC 62740."""
+        response = client.post(
+            "/api/analysis/rca/suggest",
+            json={"equipment": "Motor A"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert "five_whys" in data
+        assert "ishikawa" in data
+        assert len(data["five_whys"]) == 5
+        assert "machinery" in data["ishikawa"]
+

@@ -90,6 +90,8 @@ huggingface_cache/
 
 # PDF Reference documents
 Modelos De Confiabilidad Kijima.pdf
+kijima_analysis.md
+ram_simulation_logic.md
 
 # Code graph index directories
 .codegraph/

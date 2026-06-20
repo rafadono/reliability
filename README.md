@@ -10,15 +10,22 @@ Modern, fast reliability engineering analysis platform built with Vue 3 and Fast
 ## Features
 
 - **Independent Modular Filtering**: Each chart/module features its own independent filter options (equipment -> type -> failure mode cascade), allowing users to analyze and compare different assets and analysis types side-by-side.
+- **Tabbed Workspace Reorganization**: The dashboard has been redesigned into dynamic tabs to eliminate infinite scroll, providing a clean, tabbed workflow (Quantitative, RCM & FMECA, RCA & FTA, RAM Assurance, AI Copilot).
 - **Pareto Analysis**: 80/20 split analysis at equipment, type, and failure mode levels.
-- **Maintenance Jackknife**: Frequency vs Total Downtime scatter plots to identify acute vs chronic issues.
+- **Maintenance Jackknife**: Frequency vs Total Downtime scatter plots to identify acute vs chronic bad actors.
 - **Criticality Matrix**: Dynamic risk matrix plotting failure probability vs average downtime (MTTR).
 - **Weibull & Kijima Integration**: Fit lifetime data to Weibull distributions (Reliability and Maintainability) and Kijima imperfect repair virtual age models (Kijima I & II, with constant and time-dependent/logistic variants) within a single unified view.
-- **APM Metrics**: Bad actors ranking (MTBF, MTTR, Availability) and Reliability Growth (Crow-AMSAA) with custom failure type selectors.
+- **Reliability Centered Maintenance (RCM)**: Guided 7-question wizard complying with the **SAE JA1011/12** standard, powered by AI semantic scans of past failure logs.
+- **FMEA & FMECA Matrix**: Interactive table complying with **IEC 60812** to score Severity, Occurrence, and Detection, dynamically calculating the Risk Priority Number (RPN) and risk tiering.
+- **Root Cause Analysis (RCA)**: Automatic generation of 5 Whys and visual Ishikawa (Fishbone) diagrams complying with **IEC 62740**.
+- **Fault Tree Analysis (FTA)**: Logic gate builder (AND/OR gates) complying with **IEC 61025** to deductively assess top event failure probability from basic component failure rates.
+- **RAM Assurance Simulator**: Plant availability and production assurance simulator complying with **ISO 20815**, allowing users to vary logistics delays and PM efficiency over an 8,760-hour horizon.
+- **APM Metrics & Bad Actors**: Bad actors ranking (MTBF, MTTR, Availability) and Reliability Growth (Crow-AMSAA) with custom failure type selectors.
 - **Event Plot Timeline**: Visual failure tracking across assets over time.
 - **Interactive Dashboard**: Real-time charts and metrics.
 - **Event Detail & Manual Exclusion**: Exclude individual failure events manually or filter low TBF intervals dynamically to refit Weibull and Kijima curves from a detailed, interactive table.
 - **Hugging Face Semantic Classification (AI Comment Mining)**: Zero-shot classification to categorize unstructured failure log comments into operational, mechanical, electrical, instrumentation, or cleaning causes.
+- **Reliability AI Copilot**: A hierarchical multi-agent assistant featuring a Coordinator chatbot that delegates specialized tasks to RCM, FMEA, RCA, and RAM expert sub-agents.
 - **Report Export**: Download full interactive dashboards as high-quality A3 PDF reports.
 - **REST API**: Full-featured API with automatic documentation.
 
@@ -47,6 +54,25 @@ If you are running this project on a powerful server or PC with an **Nvidia GPU*
 * **FastAPI Interactive Docs (Swagger)**: http://localhost:8000/docs
 * **FastAPI Alternative Docs (ReDoc)**: http://localhost:8000/redoc
 
+## Environment Configuration (.env)
+
+The application supports a vendor-agnostic AI Copilot and assistant system. You can parameterize the LLM provider by copying the `.env.example` file to `.env` in the project root:
+
+```bash
+cp .env.example .env
+```
+
+### Configuration Variables
+* `LLM_PROVIDER`: The LLM engine provider. Supported values are:
+  * `mock`: Uses deterministic offline templates (default, no API key required).
+  * `gemini`: Uses the Google Gemini API.
+  * `openai`: Uses the OpenAI API.
+  * `ollama`: Uses a local Ollama server instance.
+* `LLM_MODEL`: The specific model name (e.g., `gemini-1.5-flash`, `gpt-4o`, `llama3`).
+* `GEMINI_API_KEY`: The API key for Google Gemini.
+* `OPENAI_API_KEY`: The API key for OpenAI.
+* `OLLAMA_BASE_URL`: The URL endpoint for the local Ollama API (default: `http://localhost:11434`).
+
 ## API Endpoints
 
 ### Data & Filters
@@ -72,6 +98,12 @@ If you are running this project on a powerful server or PC with an **Nvidia GPU*
 - `POST /api/analysis/kpi-trend` - Historically tracks Monthly KPI trends (MTBF, MTTR, Availability)
 - `POST /api/analysis/download-model` - Pre-downloads Hugging Face AI models to local cache
 - `POST /api/analysis/comment-mining` - Runs zero-shot semantic text classification on log comments
+
+### International Standards & AI Copilot Analytics (New)
+- `POST /api/analysis/rcm/suggest` - Custom scans database comments for physical failure causes to suggest SAE JA1011/12 decision sheets.
+- `POST /api/analysis/fmea/calculate-rpn` - Calculates Risk Priority Number (RPN) and assigns IEC 60812 risk categories (Low, Medium, High, Critical).
+- `POST /api/analysis/ram/simulate` - Simulates plant availability & production assurance under ISO 20815 based on logistic delays and PM efficiency.
+- `POST /api/analysis/rca/suggest` - Evaluates equipment failure history to auto-suggest 5 Whys and Ishikawa cause-effect branches under IEC 62740.
 
 Full interactive documentation (Swagger UI): http://localhost:8000/docs (when API is running)
 

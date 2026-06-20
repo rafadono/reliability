@@ -28,82 +28,113 @@
         />
       </div>
 
-      <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 rounded-lg shadow-md">
-        <h3 class="font-semibold mb-3">{{ $t('sidebar.analysis_types') }}</h3>
-        <ul class="space-y-1 text-sm font-medium">
-          <li>
-            <button 
-              @click="scrollToCard('pareto-card')" 
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
-            >
-              {{ $t('sidebar.pareto') }}
-            </button>
-          </li>
-          <li>
-            <button 
-              @click="scrollToCard('jackknife-card')" 
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
-            >
-              {{ $t('sidebar.jackknife') }}
-            </button>
-          </li>
-          <li>
-            <button 
-              @click="scrollToCard('criticality-card')" 
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
-            >
-              {{ $t('sidebar.criticality') }}
-            </button>
-          </li>
-          <li>
-            <button 
-              @click="scrollToCard('weibull-kijima-card')" 
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
-            >
-              {{ $t('sidebar.weibull_kijima') }}
-            </button>
-          </li>
-          <li>
-            <button 
-              @click="scrollToCard('proactive-pm-section')" 
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
-            >
-              {{ $t('sidebar.proactive') }}
-            </button>
-          </li>
-          <li>
-            <button 
-              @click="scrollToCard('event-plot-card')" 
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
-            >
-              {{ $t('sidebar.timeline') }}
-            </button>
-          </li>
-          <li>
-            <button 
-              @click="scrollToCard('apm-card')" 
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
-            >
-              {{ $t('sidebar.bad_actors') }}
-            </button>
-          </li>
-          <li>
-            <button 
-              @click="scrollToCard('trend-card')" 
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
-            >
-              {{ $t('sidebar.kpi') }}
-            </button>
-          </li>
-          <li>
-            <button 
-              @click="scrollToCard('ai-card')" 
-              class="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none focus:ring-1 focus:ring-white/30"
-            >
-              {{ $t('sidebar.ai') }}
-            </button>
-          </li>
-        </ul>
+      <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-4 rounded-xl shadow-md space-y-4">
+        <h3 class="font-bold text-xs uppercase tracking-wider border-b border-white/20 pb-2">Secciones de Análisis</h3>
+        
+        <!-- Pestaña 1: Análisis Cuantitativo -->
+        <div class="space-y-1">
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">1. Cuantitativo</div>
+          <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
+            <li>
+              <button @click="selectTabAndScroll('quant', 'pareto-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Análisis de Pareto
+              </button>
+            </li>
+            <li>
+              <button @click="selectTabAndScroll('quant', 'jackknife-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Diagrama Jackknife
+              </button>
+            </li>
+            <li>
+              <button @click="selectTabAndScroll('quant', 'criticality-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Matriz de Criticidad
+              </button>
+            </li>
+            <li>
+              <button @click="selectTabAndScroll('quant', 'weibull-kijima-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Weibull & Kijima
+              </button>
+            </li>
+            <li>
+              <button @click="selectTabAndScroll('quant', 'event-plot-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Línea de Eventos
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pestaña 2: RCM & FMECA -->
+        <div class="space-y-1">
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">2. RCM & FMECA</div>
+          <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
+            <li>
+              <button @click="selectTabAndScroll('rcm_fmea', 'rcm-wizard-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Asistente RCM (JA1011)
+              </button>
+            </li>
+            <li>
+              <button @click="selectTabAndScroll('rcm_fmea', 'fmeca-table-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Matriz FMECA (IEC 60812)
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pestaña 3: RCA & FTA -->
+        <div class="space-y-1">
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">3. RCA & FTA</div>
+          <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
+            <li>
+              <button @click="selectTabAndScroll('rca_fta', 'ishikawa-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Causa Raíz RCA (IEC 62740)
+              </button>
+            </li>
+            <li>
+              <button @click="selectTabAndScroll('rca_fta', 'fta-canvas-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Árbol de Fallas FTA (IEC 61025)
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pestaña 4: Aseguramiento RAM -->
+        <div class="space-y-1">
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">4. Aseguramiento RAM</div>
+          <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
+            <li>
+              <button @click="selectTabAndScroll('ram', 'ram-simulator-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Simulador RAM (ISO 20815)
+              </button>
+            </li>
+            <li>
+              <button @click="selectTabAndScroll('ram', 'apm-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Bad Actors APM
+              </button>
+            </li>
+            <li>
+              <button @click="selectTabAndScroll('ram', 'trend-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Tendencia de KPIs
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pestaña 5: Copiloto IA -->
+        <div class="space-y-1">
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">5. Copiloto IA</div>
+          <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
+            <li>
+              <button @click="selectTabAndScroll('copilot', 'ai-chat-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Chat Copiloto IA
+              </button>
+            </li>
+            <li>
+              <button @click="selectTabAndScroll('copilot', 'ai-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
+                Minería de Texto NLP
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div>
@@ -144,7 +175,7 @@ defineProps({
   isLoading: Boolean
 })
 
-const emit = defineEmits(['upload-file', 'reset', 'notify', 'export-pdf'])
+const emit = defineEmits(['upload-file', 'reset', 'notify', 'export-pdf', 'select-tab-card'])
 
 const fileInput = ref(null)
 
@@ -159,15 +190,7 @@ const handleFileChange = (event) => {
   }
 }
 
-const scrollToCard = (id) => {
-  const el = document.getElementById(id)
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  } else if (id === 'proactive-pm-section') {
-    const wEl = document.getElementById('weibull-kijima-card')
-    if (wEl) {
-      wEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }
+const selectTabAndScroll = (tabId, cardId) => {
+  emit('select-tab-card', { tabId, cardId })
 }
 </script>
