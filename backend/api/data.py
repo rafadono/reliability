@@ -46,7 +46,11 @@ async def upload_file(file: UploadFile = File(...)) -> UploadResponse:
 async def get_available_filters() -> Dict[str, List[str]]:
     """Get all available equipment, types, and modes (no filters applied)."""
     if state.current_data is None:
-        raise HTTPException(status_code=400, detail="No data loaded")
+        return {
+            "equipment": [],
+            "types": [],
+            "failure_modes": [],
+        }
 
     try:
         return {

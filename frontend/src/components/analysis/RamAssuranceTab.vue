@@ -1,30 +1,50 @@
 <template>
   <div class="space-y-8 animate-fade-in">
     <div class="border-b border-gray-200 dark:border-slate-700 pb-4">
-      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Aseguramiento de Producción (RAM ISO 20815)</h3>
-      <p class="text-sm text-gray-500 dark:text-slate-400">Modelamiento predictivo y análisis de confiabilidad, disponibilidad y mantenibilidad según la norma internacional ISO 20815 para plantas industriales.</p>
+      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Aseguramiento de Producción (RAM)</h3>
+      <p class="text-sm text-gray-500 dark:text-slate-400">Modelamiento predictivo y análisis de confiabilidad, disponibilidad y mantenibilidad para plantas industriales.</p>
     </div>
 
     <!-- Simulador RAM -->
-    <RamSimulatorCard 
-      :available-equipment="availableEquipment" 
-    />
+    <AnalysisCardWrapper
+      :active="isExecuted('ram_sim')"
+      node-type="ram_sim"
+      @navigate="$emit('navigate', $event)"
+    >
+      <RamSimulatorCard 
+        :available-equipment="availableEquipment" 
+      />
+    </AnalysisCardWrapper>
 
     <!-- APM Bad Actors y Growth -->
-    <ApmCard 
-      :available-equipment="availableEquipment" 
-      :available-types="availableTypes" 
-    />
+    <AnalysisCardWrapper
+      :active="isExecuted('apm')"
+      node-type="apm"
+      @navigate="$emit('navigate', $event)"
+    >
+      <ApmCard 
+        :available-equipment="availableEquipment" 
+        :available-types="availableTypes" 
+      />
+    </AnalysisCardWrapper>
 
     <!-- Tendencia de KPIs -->
-    <TrendCard 
-      :available-equipment="availableEquipment" 
-      :available-types="availableTypes" 
-    />
+    <AnalysisCardWrapper
+      :active="isExecuted('trend')"
+      node-type="trend"
+      @navigate="$emit('navigate', $event)"
+    >
+      <TrendCard 
+        :available-equipment="availableEquipment" 
+        :available-types="availableTypes" 
+      />
+    </AnalysisCardWrapper>
   </div>
 </template>
 
 <script setup>
+import { sharedState } from '../../sharedState'
+import AnalysisCardWrapper from './AnalysisCardWrapper.vue'
 import RamSimulatorCard from './RamSimulatorCard.vue'
 import ApmCard from './ApmCard.vue'
 import TrendCard from './TrendCard.vue'
@@ -39,6 +59,19 @@ defineProps({
     required: true
   }
 })
+
+defineEmits(['navigate'])
+
+const isExecuted = (nodeType) => {
+  const executed = sharedState.executedNodes || []
+  if (nodeType === 'ram_sim') {
+    return executed.includes('ramSimulator')
+  }
+  if (nodeType === 'apm') {
+    return executed.includes('trend') || executed.includes('weibull') || executed.includes('kijima')
+  }
+  return executed.includes(nodeType)
+}
 </script>
 
 <style scoped>

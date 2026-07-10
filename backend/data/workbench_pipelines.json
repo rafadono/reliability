@@ -1,0 +1,44 @@
+{
+  "test_persistence_pipeline": {
+    "name": "test_persistence_pipeline",
+    "nodes": [
+      {
+        "id": "src-1",
+        "type": "dataSource",
+        "data": {},
+        "x": 50.0,
+        "y": 150.0
+      },
+      {
+        "id": "flt-1",
+        "type": "filter",
+        "data": {
+          "equipment": "Motor A",
+          "type": "Mechanical",
+          "censored": "0"
+        },
+        "x": 250.0,
+        "y": 150.0
+      },
+      {
+        "id": "wb-1",
+        "type": "weibull",
+        "data": {},
+        "x": 450.0,
+        "y": 150.0
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "src-1",
+        "target": "flt-1"
+      },
+      {
+        "id": "e2",
+        "source": "flt-1",
+        "target": "wb-1"
+      }
+    ]
+  }
+}

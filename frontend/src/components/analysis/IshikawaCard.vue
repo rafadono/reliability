@@ -124,8 +124,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { apiService } from '../../api'
+import { sharedState } from '../../sharedState'
 
 const props = defineProps({
   availableEquipment: {
@@ -161,6 +162,17 @@ const generateRca = async () => {
     loading.value = false
   }
 }
+
+watch(() => sharedState.filters, (newVal) => {
+  if (newVal && newVal.equipment !== undefined) {
+    if (selectedEquipment.value !== newVal.equipment) {
+      selectedEquipment.value = newVal.equipment || ''
+      if (selectedEquipment.value) {
+        generateRca()
+      }
+    }
+  }
+}, { deep: true, immediate: true })
 </script>
 
 <style scoped>

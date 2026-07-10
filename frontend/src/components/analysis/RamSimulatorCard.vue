@@ -181,8 +181,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { apiService } from '../../api'
+import { sharedState } from '../../sharedState'
 
 const props = defineProps({
   availableEquipment: {
@@ -248,12 +249,41 @@ const svgPath = computed(() => {
   return `M ${pts[0].x} ${pts[0].y} ` + pts.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
 })
 
+let isSyncing = false
+
+watch(() => sharedState.ram, (newVal) => {
+  if (newVal) {
+    preventiveEfficiency.value = newVal.preventiveEfficiency
+    logisticsDelay.value = newVal.logisticsDelay
+    if (newVal.results) {
+      results.value = newVal.results
+    }
+  }
+}, { deep: true, immediate: true })
+
+watch(() => sharedState.filters, (newVal) => {
+  if (newVal && newVal.equipment !== undefined) {
+    if (selectedEquipment.value !== newVal.equipment) {
+      isSyncing = true
+      selectedEquipment.value = newVal.equipment || ''
+      nextTick(() => {
+        isSyncing = false
+      })
+    }
+  }
+}, { deep: true, immediate: true })
+
 watch(selectedEquipment, () => {
-  runSimulation()
+  if (!isSyncing) {
+    runSimulation()
+  }
 })
 
 onMounted(() => {
-  runSimulation()
+  // Only trigger simulation if not already loaded from workbench
+  if (!sharedState.ram) {
+    runSimulation()
+  }
 })
 </script>
 

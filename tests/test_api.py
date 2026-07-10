@@ -240,3 +240,55 @@ class TestAPIEndpoints:
         assert len(data["five_whys"]) == 5
         assert "machinery" in data["ishikawa"]
 
+    def test_workbench_pipeline_flow(self, client: TestClient):
+        """Test execution, save, list, and load flows of the Reliability Workbench."""
+        pipeline_data = {
+            "nodes": [
+                {"id": "src-1", "type": "dataSource", "data": {}, "x": 50.0, "y": 150.0},
+                {"id": "flt-1", "type": "filter", "data": {"equipment": "Motor A", "type": "Mechanical", "censored": "0"}, "x": 250.0, "y": 150.0},
+                {"id": "wb-1", "type": "weibull", "data": {}, "x": 450.0, "y": 150.0}
+            ],
+            "edges": [
+                {"id": "e1", "source": "src-1", "target": "flt-1"},
+                {"id": "e2", "source": "flt-1", "target": "wb-1"}
+            ]
+        }
+
+        # 1. Execute pipeline
+        response_exec = client.post("/api/workbench/execute", json=pipeline_data)
+        assert response_exec.status_code == 200
+        res_data = response_exec.json()
+        assert res_data["status"] == "success"
+        results = res_data["results"]
+        assert "src-1" in results
+        assert "flt-1" in results
+        assert "wb-1" in results
+        assert results["src-1"]["status"] == "success"
+        assert results["flt-1"]["status"] == "success"
+        assert results["wb-1"]["status"] == "success"
+        assert results["wb-1"]["output"]["beta"] is not None
+
+        # 2. Save pipeline
+        save_data = {
+            "name": "test_persistence_pipeline",
+            "nodes": pipeline_data["nodes"],
+            "edges": pipeline_data["edges"]
+        }
+        response_save = client.post("/api/workbench/save", json=save_data)
+        assert response_save.status_code == 200
+        assert response_save.json()["status"] == "success"
+
+        # 3. List pipelines
+        response_list = client.get("/api/workbench/list")
+        assert response_list.status_code == 200
+        assert "test_persistence_pipeline" in response_list.json()["pipelines"]
+
+        # 4. Load pipeline
+        response_load = client.get("/api/workbench/load/test_persistence_pipeline")
+        assert response_load.status_code == 200
+        loaded = response_load.json()
+        assert loaded["status"] == "success"
+        assert loaded["pipeline"]["name"] == "test_persistence_pipeline"
+        assert len(loaded["pipeline"]["nodes"]) == 3
+
+

@@ -35,6 +35,7 @@ COPY backend/state.py .
 COPY backend/api ./api
 COPY backend/models ./models
 COPY backend/src ./src
+COPY backend/services ./services
 
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser

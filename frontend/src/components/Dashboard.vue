@@ -8,17 +8,27 @@
       </div>
     </div>
 
+    <!-- Banner de advertencia de pestaña desactivada -->
+    <div v-if="disabledTabMessage" class="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-400 text-xs font-semibold rounded-lg flex items-center gap-2.5 animate-pulse transition-all">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      {{ disabledTabMessage }}
+    </div>
+
     <!-- Navegación de Pestañas Estilo Moderno / Glassmorphic -->
     <div class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl p-1.5 border border-gray-100 dark:border-slate-700/80 shadow-sm mb-8 flex flex-wrap gap-1 shrink-0">
       <button
         v-for="tab in tabs"
         :key="tab.id"
-        @click="activeTab = tab.id"
+        @click="onTabClick(tab.id)"
         class="flex-1 min-w-[120px] text-center px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-300 flex items-center justify-center gap-2"
         :class="[
           activeTab === tab.id
             ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
-            : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white'
+            : isTabDisabled(tab.id)
+              ? 'opacity-40 cursor-not-allowed text-gray-400 dark:text-slate-600'
+              : 'text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white'
         ]"
       >
         <component :is="tab.icon" class="w-4 h-4 shrink-0" />
@@ -33,6 +43,9 @@
           :is="activeComponent" 
           :available-equipment="availableEquipment"
           :available-types="availableTypes"
+          @navigate="activeTab = $event"
+          @upload-file="$emit('upload-file', $event)"
+          @reset="$emit('reset')"
         />
       </keep-alive>
     </div>
@@ -40,19 +53,33 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, computed, onMounted, h, watch, nextTick } from 'vue'
 import { apiService } from '../api'
+import { sharedState } from '../sharedState'
 
 // Importación de Contenedores de Pestañas
 import QuantReliabilityTab from './analysis/QuantReliabilityTab.vue'
 import RcmFmecaTab from './analysis/RcmFmecaTab.vue'
 import RcaFtaTab from './analysis/RcaFtaTab.vue'
 import RamAssuranceTab from './analysis/RamAssuranceTab.vue'
+import WorkbenchTab from './analysis/WorkbenchTab.vue'
 import AiCopilotTab from './analysis/AiCopilotTab.vue'
 
 const availableEquipment = ref([])
 const availableTypes = ref([])
-const activeTab = ref('quant')
+const activeTab = ref('workbench')
+
+// Lógica de pestañas deshabilitadas según el Workbench
+const disabledTabMessage = ref('')
+
+const isTabDisabled = (tabId) => {
+  return false
+}
+
+const onTabClick = (tabId) => {
+  activeTab.value = tabId
+  disabledTabMessage.value = ''
+}
 
 // Iconos inline usando SVG funcionales (h)
 const ChartBarIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
@@ -67,11 +94,15 @@ const SearchIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'cur
 const LightningBoltIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
   h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M13 10V3L4 14h7v7l9-11h-7z' })
 ])
+const TemplateIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+  h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' })
+])
 const ChatIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
   h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' })
 ])
 
 const tabs = [
+  { id: 'workbench', name: 'Workbench de Confiabilidad', icon: TemplateIcon, component: WorkbenchTab },
   { id: 'quant', name: 'Analisis Cuantitativo', icon: ChartBarIcon, component: QuantReliabilityTab },
   { id: 'rcm_fmea', name: 'RCM & FMECA', icon: AdjustmentsIcon, component: RcmFmecaTab },
   { id: 'rca_fta', name: 'RCA & FTA', icon: SearchIcon, component: RcaFtaTab },
@@ -84,12 +115,12 @@ const activeComponent = computed(() => {
   return current ? current.component : QuantReliabilityTab
 })
 
-import { watch, nextTick } from 'vue'
-
 const props = defineProps({
   isLoading: Boolean,
   activeTabProp: String
 })
+
+const emit = defineEmits(['upload-file', 'reset'])
 
 watch(() => props.activeTabProp, (newVal) => {
   if (newVal) {
@@ -108,10 +139,6 @@ const changeTabAndScroll = async (tabId, cardId) => {
   }, 100)
 }
 
-defineExpose({
-  changeTabAndScroll
-})
-
 const loadInitialFilters = async () => {
   try {
     const response = await apiService.getAvailableFilters()
@@ -121,6 +148,11 @@ const loadInitialFilters = async () => {
     console.error('Error loading filters', error)
   }
 }
+
+defineExpose({
+  changeTabAndScroll,
+  loadInitialFilters
+})
 
 onMounted(async () => {
   await loadInitialFilters()

@@ -18,7 +18,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Import routers
-from api import data, filters, analysis, stats
+from api import data, filters, analysis, stats, workbench
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,6 +49,7 @@ app.include_router(data.router, prefix="/api")
 app.include_router(filters.router, prefix="/api")
 app.include_router(analysis.router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
+app.include_router(workbench.router, prefix="/api")
 
 
 @app.get("/health", tags=["System"])

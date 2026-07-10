@@ -29,6 +29,15 @@ from src.reliability_analysis.analysis.metrics import (
 logger = setup_logging("Models")
 
 
+def _safe_float(val) -> Optional[float]:
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
 class ReliabilityFitter:
     """
     Fits reliability distributions to data.
@@ -184,8 +193,8 @@ class ReliabilityFitter:
                 "eta": eta_val,
                 "ar": None,
                 "ap": None,
-                "aic": float(fitter.AICc) if hasattr(fitter, "AICc") else None,
-                "bic": float(fitter.BIC) if hasattr(fitter, "BIC") else None,
+                "aic": _safe_float(fitter.AICc) if hasattr(fitter, "AICc") else None,
+                "bic": _safe_float(fitter.BIC) if hasattr(fitter, "BIC") else None,
                 "mtbf": mtbf,
                 "ks_stat": ks_stat_val,
                 "p_value": ks_p_val,

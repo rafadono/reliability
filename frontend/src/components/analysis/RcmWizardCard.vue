@@ -155,9 +155,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '../../api'
+import { sharedState } from '../../sharedState'
 
 const props = defineProps({
   availableEquipment: {
@@ -235,4 +236,15 @@ const saveRcmSheet = () => {
   })
   alert(t('charts.iso_analysis.saved_success'))
 }
+
+watch(() => sharedState.filters, (newVal) => {
+  if (newVal && newVal.equipment !== undefined) {
+    if (selectedEquipment.value !== newVal.equipment) {
+      selectedEquipment.value = newVal.equipment || ''
+      if (selectedEquipment.value) {
+        generateRcmSuggestions()
+      }
+    }
+  }
+}, { deep: true, immediate: true })
 </script>

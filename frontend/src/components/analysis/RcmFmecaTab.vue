@@ -5,15 +5,29 @@
       <p class="text-sm text-gray-500 dark:text-slate-400">Implementación de estándares internacionales para la confiabilidad operacional. Flujo RCM según SAE JA1011/12 y evaluación del RPN según IEC 60812.</p>
     </div>
 
-    <RcmWizardCard 
-      :available-equipment="availableEquipment" 
-    />
+    <AnalysisCardWrapper
+      :active="isExecuted('fmeca')"
+      node-type="rcm_fmeca"
+      @navigate="$emit('navigate', $event)"
+    >
+      <RcmWizardCard 
+        :available-equipment="availableEquipment" 
+      />
+    </AnalysisCardWrapper>
 
-    <FmecaTableCard />
+    <AnalysisCardWrapper
+      :active="isExecuted('fmeca')"
+      node-type="rcm_fmeca"
+      @navigate="$emit('navigate', $event)"
+    >
+      <FmecaTableCard />
+    </AnalysisCardWrapper>
   </div>
 </template>
 
 <script setup>
+import { sharedState } from '../../sharedState'
+import AnalysisCardWrapper from './AnalysisCardWrapper.vue'
 import RcmWizardCard from './RcmWizardCard.vue'
 import FmecaTableCard from './FmecaTableCard.vue'
 
@@ -23,6 +37,13 @@ defineProps({
     required: true
   }
 })
+
+defineEmits(['navigate'])
+
+const isExecuted = (nodeType) => {
+  const executed = sharedState.executedNodes || []
+  return executed.includes(nodeType)
+}
 </script>
 
 <style scoped>

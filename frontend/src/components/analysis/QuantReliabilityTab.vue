@@ -5,36 +5,68 @@
       <p class="text-sm text-gray-500 dark:text-slate-400">Herramientas estadísticas tradicionales para el modelado de confiabilidad, disponibilidad y análisis de fallas.</p>
     </div>
 
-    <ParetoCard 
-      id="pareto-card"
-      :available-equipment="availableEquipment" 
-      :available-types="availableTypes" 
-    />
+    <AnalysisCardWrapper
+      :active="isExecuted('pareto')"
+      node-type="pareto"
+      @navigate="$emit('navigate', $event)"
+    >
+      <ParetoCard 
+        id="pareto-card"
+        :available-equipment="availableEquipment" 
+        :available-types="availableTypes" 
+      />
+    </AnalysisCardWrapper>
 
-    <JackknifeCard 
-      id="jackknife-card" 
-      :available-equipment="availableEquipment" 
-    />
+    <AnalysisCardWrapper
+      :active="isExecuted('jackknife')"
+      node-type="jackknife"
+      @navigate="$emit('navigate', $event)"
+    >
+      <JackknifeCard 
+        id="jackknife-card" 
+        :available-equipment="availableEquipment" 
+      />
+    </AnalysisCardWrapper>
 
-    <CriticalityCard 
-      id="criticality-card" 
-      :available-equipment="availableEquipment" 
-    />
+    <AnalysisCardWrapper
+      :active="isExecuted('criticality')"
+      node-type="criticality"
+      @navigate="$emit('navigate', $event)"
+    >
+      <CriticalityCard 
+        id="criticality-card" 
+        :available-equipment="availableEquipment" 
+      />
+    </AnalysisCardWrapper>
 
-    <WeibullKijimaCard 
-      id="weibull-kijima-card"
-      :available-equipment="availableEquipment" 
-      :available-types="availableTypes" 
-    />
+    <AnalysisCardWrapper
+      :active="isExecuted('weibull_kijima')"
+      node-type="weibull_kijima"
+      @navigate="$emit('navigate', $event)"
+    >
+      <WeibullKijimaCard 
+        id="weibull-kijima-card"
+        :available-equipment="availableEquipment" 
+        :available-types="availableTypes" 
+      />
+    </AnalysisCardWrapper>
 
-    <EventPlotCard 
-      id="event-plot-card" 
-      :available-equipment="availableEquipment" 
-    />
+    <AnalysisCardWrapper
+      :active="isExecuted('event_plot')"
+      node-type="event_plot"
+      @navigate="$emit('navigate', $event)"
+    >
+      <EventPlotCard 
+        id="event-plot-card" 
+        :available-equipment="availableEquipment" 
+      />
+    </AnalysisCardWrapper>
   </div>
 </template>
 
 <script setup>
+import { sharedState } from '../../sharedState'
+import AnalysisCardWrapper from './AnalysisCardWrapper.vue'
 import ParetoCard from './ParetoCard.vue'
 import JackknifeCard from './JackknifeCard.vue'
 import CriticalityCard from './CriticalityCard.vue'
@@ -51,6 +83,19 @@ defineProps({
     required: true
   }
 })
+
+defineEmits(['navigate'])
+
+const isExecuted = (nodeType) => {
+  const executed = sharedState.executedNodes || []
+  if (nodeType === 'event_plot' || nodeType === 'criticality') {
+    return executed.includes('dataSource') || executed.includes('filter')
+  }
+  if (nodeType === 'weibull_kijima') {
+    return executed.includes('weibull') || executed.includes('kijima')
+  }
+  return executed.includes(nodeType)
+}
 </script>
 
 <style scoped>

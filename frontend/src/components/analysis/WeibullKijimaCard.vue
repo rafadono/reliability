@@ -402,6 +402,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '../../api'
 import { Chart } from 'chart.js/auto'
+import { sharedState } from '../../sharedState'
 
 const { t, locale } = useI18n()
 
@@ -657,6 +658,45 @@ watch(activeTab, () => {
 
 watch(() => localFilters.value.equipment, () => {
   excludedIndices.value = []
+})
+
+watch(() => sharedState.filters, (newVal) => {
+  if (newVal) {
+    if (newVal.equipment !== undefined) {
+      localFilters.value.equipment = newVal.equipment || ''
+    }
+    if (newVal.type !== undefined) {
+      if (Array.isArray(newVal.type)) {
+        typesToFit.value = [...newVal.type]
+      } else if (newVal.type) {
+        typesToFit.value = [newVal.type]
+      } else {
+        typesToFit.value = []
+      }
+    }
+  }
+}, { deep: true, immediate: true })
+
+let isSyncing = false
+const syncFromWorkbench = async (tab) => {
+  if (isSyncing) return
+  isSyncing = true
+  activeTab.value = tab
+  await nextTick()
+  await loadAnalysis()
+  isSyncing = false
+}
+
+watch(() => sharedState.weibull, (newVal) => {
+  if (newVal) {
+    syncFromWorkbench('TTX')
+  }
+})
+
+watch(() => sharedState.kijima, (newVal) => {
+  if (newVal) {
+    syncFromWorkbench('TBX')
+  }
 })
 
 const toggleIndexExclusion = (index) => {
@@ -1023,7 +1063,9 @@ watch(locale, () => {
 })
 
 onMounted(() => {
-  loadAnalysis()
+  if (!sharedState.weibull && !sharedState.kijima) {
+    loadAnalysis()
+  }
   window.addEventListener('theme-changed', handleThemeChange)
 })
 

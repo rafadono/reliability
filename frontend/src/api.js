@@ -186,5 +186,21 @@ export const apiService = {
       equipment,
       failure_event_date: failureEventDate
     })
+  },
+
+  executeWorkbenchPipeline(payload) {
+    return api.post('/workbench/execute', payload)
+  },
+
+  saveWorkbenchPipeline(payload) {
+    return api.post('/workbench/save', payload)
+  },
+
+  listWorkbenchPipelines() {
+    return api.get('/workbench/list')
+  },
+
+  loadWorkbenchPipeline(name) {
+    return api.get(`/workbench/load/${name}`)
   }
 }

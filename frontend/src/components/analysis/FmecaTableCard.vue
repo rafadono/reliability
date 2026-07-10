@@ -165,9 +165,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '../../api'
+import { sharedState } from '../../sharedState'
 
 const { t } = useI18n()
 
@@ -176,6 +177,12 @@ const tableData = ref([
   { component: 'Sello de Eje', mode: 'Desgaste de elastómero', effect: 'Fuga de lubricante sintético', severity: 6, occurrence: 6, detection: 2, rpn: 72, category: 'Medio', action: 'Reemplazo preventivo en PM2' },
   { component: 'Motor de Tracción', mode: 'Cortocircuito devanado', effect: 'Parada súbita de equipo y bloqueo', severity: 9, occurrence: 2, detection: 2, rpn: 36, category: 'Bajo', action: 'Pruebas de aislamiento anuales' }
 ])
+
+watch(() => sharedState.fmecaRecords, (newVal) => {
+  if (newVal && newVal.length > 0) {
+    tableData.value = [...newVal]
+  }
+}, { deep: true, immediate: true })
 
 const newRecord = ref({
   component: '',

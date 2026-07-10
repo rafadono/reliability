@@ -9,7 +9,7 @@
             </div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ $t('navbar.title') }}</h1>
           </div>
-          <button v-if="dataLoaded" @click="isSidebarOpen = !isSidebarOpen" class="p-2 ml-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors" title="Toggle Sidebar">
+          <button @click="isSidebarOpen = !isSidebarOpen" class="p-2 ml-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors" title="Toggle Sidebar">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -45,28 +45,22 @@
 
     <div class="flex h-[calc(100vh-80px)]">
       <Sidebar 
-        v-if="dataLoaded"
         v-show="isSidebarOpen"
-        @upload-file="handleSidebarUpload"
         @notify="showNotification"
-        @reset="handleReset"
         @export-pdf="handleExportPDF"
         @select-tab-card="handleSelectTabCard"
         :isLoading="isLoading"
       />
       <main class="flex-1 overflow-auto">
-        <FileUpload 
-          v-if="!dataLoaded"
-          @file-uploaded="handleFileUploaded"
-          :isLoading="isLoading"
-        />
-        <div id="dashboard-content" class="min-h-full" v-else>
+        <div id="dashboard-content" class="min-h-full">
           <Dashboard 
             ref="dashboardRef"
             :key="dashboardKey"
             :isLoading="isLoading"
             :active-tab-prop="globalActiveTab"
             @filters-changed="handleFiltersChanged"
+            @upload-file="handleSidebarUpload"
+            @reset="handleReset"
           />
         </div>
       </main>
@@ -82,20 +76,19 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Dashboard from './components/Dashboard.vue'
-import FileUpload from './components/FileUpload.vue'
 import Sidebar from './components/Sidebar.vue'
 import { apiService } from './api'
 import html2pdf from 'html2pdf.js'
+import { sharedState } from './sharedState'
 
 const { locale } = useI18n()
-const dataLoaded = ref(false)
 const isLoading = ref(false)
 const notification = ref('')
 const dashboardKey = ref(0)
 const isSidebarOpen = ref(true)
 const isDarkMode = ref(false)
 
-const globalActiveTab = ref('quant')
+const globalActiveTab = ref('workbench')
 const dashboardRef = ref(null)
 
 const handleSelectTabCard = (data) => {
@@ -123,10 +116,7 @@ const toggleDarkMode = () => {
   window.dispatchEvent(new Event('theme-changed'))
 }
 
-const handleFileUploaded = () => {
-  dataLoaded.value = true
-  showNotification('File uploaded successfully')
-}
+
 
 const handleFiltersChanged = () => {
   // Handle filter changes from Dashboard
@@ -138,7 +128,9 @@ const handleSidebarUpload = async (file) => {
     const response = await apiService.upload(file)
     if (response.data.status === 'success') {
       showNotification('New file uploaded successfully')
-      dashboardKey.value += 1
+      if (dashboardRef.value) {
+        await dashboardRef.value.loadInitialFilters()
+      }
     }
   } catch (error) {
     console.error('Error uploading file:', error)
@@ -153,7 +145,19 @@ const handleReset = async () => {
   try {
     await apiService.resetFilters()
     showNotification('Filters reset')
-    dashboardKey.value += 1
+    sharedState.filters = {
+      equipment: '',
+      type: '',
+      mdf: '',
+      censored: 'all'
+    }
+    sharedState.weibull = null
+    sharedState.kijima = null
+    sharedState.fmecaRecords = null
+    sharedState.ram = null
+    if (dashboardRef.value) {
+      await dashboardRef.value.loadInitialFilters()
+    }
   } catch (error) {
     console.error('Error resetting filters:', error)
   } finally {
@@ -200,12 +204,5 @@ onMounted(async () => {
     document.documentElement.classList.remove('dark')
   }
 
-  // Check if data is already loaded
-  try {
-    await apiService.getSummaryStats()
-    dataLoaded.value = true
-  } catch {
-    dataLoaded.value = false
-  }
 })
 </script>
