@@ -5,267 +5,59 @@
 ![Vue 3](https://img.shields.io/badge/vue-3.x-brightgreen.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)
 
-Modern, fast reliability engineering analysis platform built with Vue 3 and FastAPI.
+Modern reliability engineering analysis platform built with Vue 3 and FastAPI.
 
-## Features
+## Key Capabilities
 
-- **Independent Modular Filtering**: Each chart/module features its own independent filter options (equipment -> type -> failure mode cascade), allowing users to analyze and compare different assets and analysis types side-by-side.
-- **Tabbed Workspace Reorganization**: The dashboard has been redesigned into dynamic tabs to eliminate infinite scroll, providing a clean, tabbed workflow (Quantitative, RCM & FMECA, RCA & FTA, RAM Assurance, AI Copilot).
-- **Pareto Analysis**: 80/20 split analysis at equipment, type, and failure mode levels.
-- **Maintenance Jackknife**: Frequency vs Total Downtime scatter plots to identify acute vs chronic bad actors.
-- **Criticality Matrix**: Dynamic risk matrix plotting failure probability vs average downtime (MTTR).
-- **Weibull & Kijima Integration**: Fit lifetime data to Weibull distributions (Reliability and Maintainability) and Kijima imperfect repair virtual age models (Kijima I & II, with constant and time-dependent/logistic variants) within a single unified view.
-- **Reliability Centered Maintenance (RCM)**: Guided 7-question wizard complying with the **SAE JA1011/12** standard, powered by AI semantic scans of past failure logs.
-- **FMEA & FMECA Matrix**: Interactive table complying with **IEC 60812** to score Severity, Occurrence, and Detection, dynamically calculating the Risk Priority Number (RPN) and risk tiering.
-- **Root Cause Analysis (RCA)**: Automatic generation of 5 Whys and visual Ishikawa (Fishbone) diagrams complying with **IEC 62740**.
-- **Fault Tree Analysis (FTA)**: Logic gate builder (AND/OR gates) complying with **IEC 61025** to deductively assess top event failure probability from basic component failure rates.
-- **RAM Assurance Simulator**: Plant availability and production assurance simulator complying with **ISO 20815**, allowing users to vary logistics delays and PM efficiency over an 8,760-hour horizon.
-- **APM Metrics & Bad Actors**: Bad actors ranking (MTBF, MTTR, Availability) and Reliability Growth (Crow-AMSAA) with custom failure type selectors.
-- **Event Plot Timeline**: Visual failure tracking across assets over time.
-- **Interactive Dashboard**: Real-time charts and metrics.
-- **Event Detail & Manual Exclusion**: Exclude individual failure events manually or filter low TBF intervals dynamically to refit Weibull and Kijima curves from a detailed, interactive table.
-- **Hugging Face Semantic Classification (AI Comment Mining)**: Zero-shot classification to categorize unstructured failure log comments into operational, mechanical, electrical, instrumentation, or cleaning causes.
-- **Reliability AI Copilot**: A hierarchical multi-agent assistant featuring a Coordinator chatbot that delegates specialized tasks to RCM, FMEA, RCA, and RAM expert sub-agents.
-- **Report Export**: Download full interactive dashboards as high-quality A3 PDF reports.
-- **REST API**: Full-featured API with automatic documentation.
+* **Reliability Workbench**: Interactive flow and pipeline builder to visually connect data sources, filters, Weibull fittings, Pareto charts, and RAM simulations.
+* **Quantitative Analysis**: Fits lifetime data to Weibull distributions and imperfect repair virtual age models (Kijima I & II). Includes Pareto analysis, Jackknife charts, and criticality matrices.
+* **International Standards Compliance**:
+  * **RCM (SAE JA1011/12)**: Guided 7-question failure mode evaluation.
+  * **FMECA (IEC 60812)**: Risk Priority Number (RPN) scoring matrix.
+  * **RCA (IEC 62740)**: Automated 5 Whys and Ishikawa (Fishbone) diagrams.
+  * **FTA (IEC 61025)**: Graphical Fault Tree logic gate builder.
+  * **RAM Assurance (ISO 20815)**: Plant availability simulator modeling logistics delays and maintenance efficiency.
+* **AI Copilot**: Vendor-agnostic LLM assistant (Gemini, OpenAI, Ollama, Mock) for RCM recommendations, comment mining, and interactive troubleshooting.
 
 ---
 
-## Quick Start (with Docker - Recommended)
+## Quick Start (Docker - Recommended)
 
-The simplest way to run the entire stack is using Docker Compose:
-
-### Installation via Docker (Recommended)
-1. Run `docker-compose up --build -d`
-2. Access the frontend at `http://localhost:5173` and the backend API at `http://localhost:8000`.
-
-### Important Note on AI Models and GPU/CPU
-This project uses Hugging Face AI models for semantic text analysis. 
-By default, the `docker-compose.yml` is configured to build using the **CPU version** of the AI frameworks (`USE_GPU: 0`). 
-If you are running this project on a powerful server or PC with an **Nvidia GPU**, you should enable GPU acceleration to make the text analysis exponentially faster:
-1. Open `docker-compose.yml`.
-2. Under the `backend` build section, change `USE_GPU: 0` to `USE_GPU: 1`.
-3. Rebuild your containers: `docker-compose up --build`.
-
-*(Note: Automatic detection of a GPU during a Docker build is technically impossible because Docker isolates the build environment from the host's physical hardware. Therefore, this toggle must be changed manually).*
-
-### Access the Application
-* **Frontend Dashboard**: http://localhost:5173
-* **FastAPI Interactive Docs (Swagger)**: http://localhost:8000/docs
-* **FastAPI Alternative Docs (ReDoc)**: http://localhost:8000/redoc
-
-## Environment Configuration (.env)
-
-The application supports a vendor-agnostic AI Copilot and assistant system. You can parameterize the LLM provider by copying the `.env.example` file to `.env` in the project root:
+Run the entire stack containing both the backend and frontend:
 
 ```bash
-cp .env.example .env
+docker-compose up --build -d
 ```
 
-### Configuration Variables
-* `LLM_PROVIDER`: The LLM engine provider. Supported values are:
-  * `mock`: Uses deterministic offline templates (default, no API key required).
-  * `gemini`: Uses the Google Gemini API.
-  * `openai`: Uses the OpenAI API.
-  * `ollama`: Uses a local Ollama server instance.
-* `LLM_MODEL`: The specific model name (e.g., `gemini-1.5-flash`, `gpt-4o`, `llama3`).
-* `GEMINI_API_KEY`: The API key for Google Gemini.
-* `OPENAI_API_KEY`: The API key for OpenAI.
-* `OLLAMA_BASE_URL`: The URL endpoint for the local Ollama API (default: `http://localhost:11434`).
+* **Frontend Dashboard**: http://localhost:5173
+* **FastAPI Interactive Swagger Docs**: http://localhost:8000/docs
+* **FastAPI ReDoc**: http://localhost:8000/redoc
 
-## API Endpoints
-
-### Data & Filters
-- `POST /api/upload` - Upload CSV data file
-- `GET /api/filters` - Get available filter options hierarchically
-- `POST /api/filters/set` - Apply active filters cascade
-- `GET /api/data/available-filters` - Get all unique filter options
-- `GET /api/data/reset-filters` - Reset all filter selections
-
-### Statistics & Overview
-- `GET /api/stats/summary` - Summary statistics for active filters
-
-### Reliability & Maintenance Analytics
-- `POST /api/analysis/pareto` - Pareto failure frequency & 80/20 split
-- `POST /api/analysis/jackknife-plot` - Maintenance Jackknife plot (failure frequency vs total downtime scatter & averages)
-- `POST /api/analysis/fit` - Fits Weibull distributions (for reliability & maintainability curves)
-- `POST /api/analysis/bad-actors` - APM Bad Actor rankings (MTBF, MTTR, Availability)
-- `POST /api/analysis/growth` - Reliability Growth tracking (Crow-AMSAA)
-- `POST /api/analysis/kijima-fit` - Fits Kijima imperfect repair virtual age models (Kijima I & II)
-- `POST /api/analysis/event-plot` - Event timeline dataset generation per asset
-- `POST /api/analysis/optimal-pm` - Calculates optimal Preventive Maintenance interval
-- `POST /api/analysis/conditional-reliability` - Computes conditional mission reliability
-- `POST /api/analysis/kpi-trend` - Historically tracks Monthly KPI trends (MTBF, MTTR, Availability)
-- `POST /api/analysis/download-model` - Pre-downloads Hugging Face AI models to local cache
-- `POST /api/analysis/comment-mining` - Runs zero-shot semantic text classification on log comments
-
-### International Standards & AI Copilot Analytics (New)
-- `POST /api/analysis/rcm/suggest` - Custom scans database comments for physical failure causes to suggest SAE JA1011/12 decision sheets.
-- `POST /api/analysis/fmea/calculate-rpn` - Calculates Risk Priority Number (RPN) and assigns IEC 60812 risk categories (Low, Medium, High, Critical).
-- `POST /api/analysis/ram/simulate` - Simulates plant availability & production assurance under ISO 20815 based on logistic delays and PM efficiency.
-- `POST /api/analysis/rca/suggest` - Evaluates equipment failure history to auto-suggest 5 Whys and Ishikawa cause-effect branches under IEC 62740.
-
-Full interactive documentation (Swagger UI): http://localhost:8000/docs (when API is running)
+### GPU Acceleration for AI Models
+The Hugging Face models used for text mining run on CPU by default. If you have an Nvidia GPU, change `USE_GPU: 0` to `USE_GPU: 1` under the backend build section in `docker-compose.yml`, then rebuild: `docker-compose up --build -d`.
 
 ---
 
-## Option 2: Local Development Setup
+## Local Development Setup
 
 If running locally without Docker:
 
-### Backend Setup
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app:app --reload
-```
-
-### Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
----
-
-## Debugging and Logs (Docker)
-
-If you need to inspect the status or debug issues:
-
-```bash
-# View backend service logs
-docker-compose logs backend
-
-# View frontend service logs  
-docker-compose logs frontend
-
-# Follow both logs in real time
-docker-compose logs -f
-
-# Stop and clean up all containers
-docker-compose down
-```
-
-### Common Troubleshooting:
-* **Port 5173 is busy**: Vite will automatically try the next port (e.g. `5174`). Check frontend logs to confirm the port.
-* **Backend not responding**: Wait 10–15 seconds after starting the container for all Python and C++ package initializations to complete.
-* **Clean rebuild**: If experiencing caching issues with Node.js modules or packages:
-  ```bash
-  docker-compose build --no-cache
-  docker-compose up
-  ```
-
----
-
-## Data Format
-
-The platform supports semicolon-separated CSV files (`;`) and automatically handles **both English and Spanish headers**.
-
-Example format:
-```csv
-Equipment;Type;mdf;TTX;Censored;Date;Comment
-Motor A;Mechanical;Bearing;100;0;01/01/2026;Mechanical failure of bearing due to wear
-Pump B;Hydraulic;Seal;120;1;01/02/2026;Operational decision failure
-```
-
-### Supported Columns and Spanish Auto-Mappings:
-- **Equipment** (or `Equipo`): Asset identifier.
-- **Type** (or `Tipo`): Failure classification.
-- **mdf** (or `Modo de Falla`, `failure mode`): Specific failure mechanism.
-- **TTX** (or `Duracion`, `duración`, `duration`, `downtime`): Repair or downtime duration (hours).
-- **Censored** (or `Censurado`): Censoring indicator (`0` for failure event, `1` for censored/operational stop).
-- **Date** (or `Fecha`): Start date of the event (`dd/mm/yyyy` format).
-- **Time** (or `Hora`): Optional start time of the event (`hh:mm:ss`).
-- **Comment** (or `Comentario`): Event descriptions used for NLP text mining analysis.
-- **Days** (or `Dias`, `días`): Alternate column for days to failure (if TTX is not present).
-
----
-
-## Technical Stack
-
-**Backend:**
-- FastAPI - Async Python web framework
-- Pandas & NumPy - Data analysis and structures
-- SciPy - Parametric fitting optimization
-- reliability - Reliability engineering calculations
-
-**Frontend:**
-- Vue 3 - Reactive user interface (Composition API)
-- Vite - Production build tool
-- Chart.js - Canvas charts
-- Tailwind CSS - Component styling
-
----
-
-## Development & Verification
-
-### Running Tests
-Ensure all backend assertions are passing:
-```bash
-pytest tests/
-```
-
-### Formatting and Linting
-The codebase is structured around PEP 8 styles using Ruff:
-```bash
-ruff check .
-```
-
----
-
-## Future Review & Unused Features
-
-The following features and functions are implemented and tested, but currently not active in the main UI/API workflow:
-- **General Distribution Fitting**: `ReliabilityFitter.fit` in `models.py` uses the `reliability` package's `Fit_Everything` to fit 10+ probability distributions. Kept for future development if non-Weibull parametric fittings are needed.
-- **Unused Core Helper Functions & Metrics**: `kolmogorov_smirnov_test`, `ks_test_weibull_pit`, and `r2_mrl` in `metrics.py` are preserved as they could be useful for validation/goodness-of-fit once broader fitting algorithms are enabled.
-
----
-
-## Contributing & Development Guide
-
-First off, thank you for considering contributing to the Reliability Analysis Platform! It's people like you that make open source tools great.
-
-### Development Setup
-
-The easiest way to get started is to use Docker, but for active development, running locally is often faster.
-
-#### Prerequisites
-- Python 3.12+
-- Node.js 20+
-- Git
-
-#### 1. Clone the repository
-
-```bash
-git clone https://github.com/rafadono/reliability.git
-cd reliability
-```
-
-#### 2. Backend Setup (FastAPI)
-
-1. Navigate to the backend directory:
+### Backend (FastAPI)
+1. Go to backend directory:
    ```bash
    cd backend
    ```
-2. Create and activate a virtual environment (optional but recommended):
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
-   ```
-3. Install dependencies:
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
-   pip install pytest ruff
    ```
-4. Run the development server:
+3. Run the development server:
    ```bash
    uvicorn app:app --reload
    ```
 
-#### 3. Frontend Setup (Vue 3)
-
-1. Open a new terminal and navigate to the frontend directory:
+### Frontend (Vue 3 / Vite)
+1. Go to frontend directory:
    ```bash
    cd frontend
    ```
@@ -278,37 +70,47 @@ cd reliability
    npm run dev
    ```
 
-### Code Style & Linting
+---
 
-#### Python (Backend)
-We use `ruff` for all Python formatting and linting. Before committing your code, please run:
+## Configuration (.env)
 
-```bash
-ruff format .
-ruff check --fix .
+Customize the LLM provider by creating a `.env` file in the root directory:
+
+* `LLM_PROVIDER`: Selected LLM vendor (`mock`, `gemini`, `openai`, `ollama`).
+* `LLM_MODEL`: Model name (e.g. `gemini-1.5-flash`, `gpt-4o`, `llama3`).
+* `GEMINI_API_KEY`: API key for Google Gemini.
+* `OPENAI_API_KEY`: API key for OpenAI.
+* `OLLAMA_BASE_URL`: API URL for local Ollama server (default: `http://localhost:11434`).
+
+---
+
+## Data Format
+
+The platform ingests semicolon-separated (`;`) CSV files with English or Spanish headers.
+
+```csv
+Equipment;Type;mdf;TTX;Censored;Date;Comment
+Motor A;Mechanical;Bearing;100;0;01/01/2026;Mechanical failure of bearing due to wear
+Pump B;Hydraulic;Seal;120;1;01/02/2026;Operational decision failure
 ```
 
-Our GitHub Actions CI workflow will automatically check and format your code using Ruff when you push or open a PR.
+* **Equipment** (or `Equipo`): Asset identifier.
+* **Type** (or `Tipo`): Failure classification.
+* **mdf** (or `Modo de Falla`, `failure mode`): Specific failure mechanism.
+* **TTX** (or `Duracion`, `duración`, `duration`, `downtime`): Downtime or duration (hours).
+* **Censored** (or `Censurado`): Status (`0` for failure, `1` for operational/censored stop).
+* **Date** (or `Fecha`): Start date (`dd/mm/yyyy`).
+* **Comment** (or `Comentario`): Short text used for NLP mining.
 
-#### JavaScript/Vue (Frontend)
-Make sure your frontend code follows the existing style patterns and builds successfully (`npm run build`).
+---
 
-### Running Tests
+## Testing & Quality
 
-All new backend features should include appropriate unit tests. Run the test suite using pytest:
-
-```bash
-# from the root or backend directory
-python -m pytest tests/
-```
-
-### Pull Request Process
-
-1. Ensure any install or build dependencies are removed before the end of the layer when doing a build.
-2. Update the README.md with details of changes to the interface, this includes new environment variables, exposed ports, useful file locations and container parameters.
-3. You may merge the Pull Request in once you have the sign-off of other developers, or if you do not have permission to do that, you may request the reviewer to merge it for you.
-
-### License
-
-By contributing to this repository, you agree that your contributions will be licensed under its MIT License.
-
+* Run backend tests:
+  ```bash
+  pytest tests/
+  ```
+* Lint check:
+  ```bash
+  ruff check .
+  ```
