@@ -1,7 +1,5 @@
 import numpy as np
-import pytest
 from src.reliability_analysis.analysis.kijima_model import (
-    KijimaModelI,
     KijimaModelII,
 )
 

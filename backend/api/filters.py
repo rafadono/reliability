@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 async def get_filters(
     plant: Optional[str] = Query(None),
     equipment: Optional[str] = Query(None),
-    failure_type: Optional[str] = Query(None)
+    failure_type: Optional[str] = Query(None),
 ) -> FilterOptions:
     """
     Get available filter options respecting hierarchy: Plant -> Equipment -> Type -> Mode.

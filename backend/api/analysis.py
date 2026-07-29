@@ -9,7 +9,6 @@ import traceback
 import time
 from src.reliability_analysis.utils.config import NLP_MODELS_TO_COMPARE
 from src.reliability_analysis.analysis.hf_classifier import SemanticModelManager
-from huggingface_hub import scan_cache_dir
 
 import state
 from models.requests import (
@@ -132,21 +131,18 @@ async def jackknife_plot_analysis(req: AnalysisRequest) -> Dict[str, Any]:
             item_avg_downtime = float(row["avg_downtime"])
             item_prob = item_failures / total_failures if total_failures > 0 else 0.0
 
-            scatter_data.append({
-                "name": str(row[group_col]),
-                "x": item_failures,
-                "x_prob": item_prob,
-                "y_total": item_downtime,
-                "y_avg": item_avg_downtime,
-            })
+            scatter_data.append(
+                {
+                    "name": str(row[group_col]),
+                    "x": item_failures,
+                    "x_prob": item_prob,
+                    "y_total": item_downtime,
+                    "y_avg": item_avg_downtime,
+                }
+            )
 
         # Calculate regions on backend (all business/analytical calculations here)
-        regions = {
-            "acuteChronic": [],
-            "acute": [],
-            "chronic": [],
-            "acceptable": []
-        }
+        regions = {"acuteChronic": [], "acute": [], "chronic": [], "acceptable": []}
 
         for item in scatter_data:
             x = item["x"]
@@ -172,11 +168,15 @@ async def jackknife_plot_analysis(req: AnalysisRequest) -> Dict[str, Any]:
             "regions": regions,
         }
     except Exception as e:
-        logger.error(f"Jackknife plot analysis error: {str(e)}\n{traceback.format_exc()}")
+        logger.error(
+            f"Jackknife plot analysis error: {str(e)}\n{traceback.format_exc()}"
+        )
         raise HTTPException(status_code=400, detail=str(e))
 
 
-def compute_criticality(data: pd.DataFrame, compare_by: str, metric_x: str = "count") -> Dict[str, Any]:
+def compute_criticality(
+    data: pd.DataFrame, compare_by: str, metric_x: str = "count"
+) -> Dict[str, Any]:
     """
     Shared Criticality Matrix computation (frequency/probability vs average downtime),
     used both by the /analysis/criticality-plot endpoint and the Workbench 'criticality' node,
@@ -221,13 +221,15 @@ def compute_criticality(data: pd.DataFrame, compare_by: str, metric_x: str = "co
         item_avg_downtime = float(row["avg_downtime"])
         item_prob = item_failures / total_failures if total_failures > 0 else 0.0
 
-        scatter_data.append({
-            "name": str(row[group_col]),
-            "x": item_failures,
-            "x_prob": item_prob,
-            "y_total": item_downtime,
-            "y_avg": item_avg_downtime,
-        })
+        scatter_data.append(
+            {
+                "name": str(row[group_col]),
+                "x": item_failures,
+                "x_prob": item_prob,
+                "y_total": item_downtime,
+                "y_avg": item_avg_downtime,
+            }
+        )
 
     # Calculate regions on backend (all business/analytical calculations here)
     metric_x = metric_x or "count"
@@ -241,7 +243,7 @@ def compute_criticality(data: pd.DataFrame, compare_by: str, metric_x: str = "co
         "highRisk": [],
         "highConsequence": [],
         "highFrequency": [],
-        "lowRisk": []
+        "lowRisk": [],
     }
 
     for item in scatter_data:
@@ -292,9 +294,10 @@ async def criticality_plot_analysis(req: CriticalityRequest) -> Dict[str, Any]:
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
-        logger.error(f"Criticality plot analysis error: {str(e)}\n{traceback.format_exc()}")
+        logger.error(
+            f"Criticality plot analysis error: {str(e)}\n{traceback.format_exc()}"
+        )
         raise HTTPException(status_code=400, detail=str(e))
-
 
 
 @router.post("/analysis/fit", tags=["Analysis"])
@@ -346,42 +349,55 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
         intervals_df = fit_data[fit_data["TBX"] >= 0.0].copy()
         if "Start_Date" in intervals_df.columns:
             intervals_df = intervals_df.sort_values("Start_Date")
-        
+
         intervals_list = []
         active_idx = 1
         indices_to_drop = []
         for i, (orig_idx, row) in enumerate(intervals_df.iterrows()):
             tbx_val = float(row["TBX"])
-            is_baseline_start = (i == 0)
-            
+            is_baseline_start = i == 0
+
             is_manually_excluded = False
             if not is_baseline_start:
-                is_manually_excluded = (active_idx in excluded_idxs)
-                
-            is_included = (tbx_val >= min_tbx) and (tbx_val > 0.0) and not is_baseline_start and not is_manually_excluded
+                is_manually_excluded = active_idx in excluded_idxs
+
+            is_included = (
+                (tbx_val >= min_tbx)
+                and (tbx_val > 0.0)
+                and not is_baseline_start
+                and not is_manually_excluded
+            )
             if is_manually_excluded:
                 indices_to_drop.append(orig_idx)
-            
-            date_str = str(row["Start_Date"]) if "Start_Date" in row and pd.notnull(row["Start_Date"]) else "-"
+
+            date_str = (
+                str(row["Start_Date"])
+                if "Start_Date" in row and pd.notnull(row["Start_Date"])
+                else "-"
+            )
             type_val = str(row["Type"]) if "Type" in row else "-"
             mode_val = str(row["mdf"]) if "mdf" in row else "-"
-            
-            intervals_list.append({
-                "index": active_idx,
-                "date": date_str,
-                "tbx": tbx_val,
-                "type": type_val,
-                "mode": mode_val,
-                "included": is_included,
-                "is_baseline": is_baseline_start,
-                "manually_excluded": is_manually_excluded
-            })
+
+            intervals_list.append(
+                {
+                    "index": active_idx,
+                    "date": date_str,
+                    "tbx": tbx_val,
+                    "type": type_val,
+                    "mode": mode_val,
+                    "included": is_included,
+                    "is_baseline": is_baseline_start,
+                    "manually_excluded": is_manually_excluded,
+                }
+            )
             if not is_baseline_start:
                 active_idx += 1
 
         # Filter the fit dataset for actual Weibull fitting
         fit_data_for_fit = fit_data.drop(index=indices_to_drop)
-        fit_data_for_fit = fit_data_for_fit[(fit_data_for_fit["TBX"] >= min_tbx) & (fit_data_for_fit["TBX"] > 0)].copy()
+        fit_data_for_fit = fit_data_for_fit[
+            (fit_data_for_fit["TBX"] >= min_tbx) & (fit_data_for_fit["TBX"] > 0)
+        ].copy()
 
         fitter = ReliabilityFitter(fit_data_for_fit)
         results = fitter.fit_weibull(
@@ -422,16 +438,30 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
         return {
             "status": "success",
             "parameters": {
-                "beta": float(results["beta"]) if results.get("beta") is not None else None,
-                "eta": float(results["eta"]) if results.get("eta") is not None else None,
+                "beta": float(results["beta"])
+                if results.get("beta") is not None
+                else None,
+                "eta": float(results["eta"])
+                if results.get("eta") is not None
+                else None,
             },
             "goodness_of_fit": {
-                "aic": float(results.get("aic")) if results.get("aic") is not None else None,
-                "bic": float(results.get("bic")) if results.get("bic") is not None else None,
-                "p_value": float(results.get("p_value")) if results.get("p_value") is not None else None,
-                "ks_stat": float(results.get("ks_stat")) if results.get("ks_stat") is not None else None,
+                "aic": float(results.get("aic"))
+                if results.get("aic") is not None
+                else None,
+                "bic": float(results.get("bic"))
+                if results.get("bic") is not None
+                else None,
+                "p_value": float(results.get("p_value"))
+                if results.get("p_value") is not None
+                else None,
+                "ks_stat": float(results.get("ks_stat"))
+                if results.get("ks_stat") is not None
+                else None,
             },
-            "mtbf": float(results.get("mtbf")) if results.get("mtbf") is not None else None,
+            "mtbf": float(results.get("mtbf"))
+            if results.get("mtbf") is not None
+            else None,
             "reliability_curve": curve_data,
             "sample_size": len(fit_data_for_fit),
             "failures_count": results.get("failures_count"),
@@ -449,7 +479,9 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-def compute_bad_actors(data: pd.DataFrame, compare_by: str = "equipment") -> List[Dict[str, Any]]:
+def compute_bad_actors(
+    data: pd.DataFrame, compare_by: str = "equipment"
+) -> List[Dict[str, Any]]:
     """
     Shared 'Bad Actors' (APM) ranking computation, used both by /analysis/bad-actors
     and the Workbench 'apm' node, so a configuration made in either place matches.
@@ -462,9 +494,7 @@ def compute_bad_actors(data: pd.DataFrame, compare_by: str = "equipment") -> Lis
         group_col = "Equipment" if "Equipment" in data.columns else data.columns[0]
 
     uptime_col = (
-        "TBX"
-        if "TBX" in data.columns
-        else ("Days" if "Days" in data.columns else None)
+        "TBX" if "TBX" in data.columns else ("Days" if "Days" in data.columns else None)
     )
     downtime_col = "TTX" if "TTX" in data.columns else None
 
@@ -508,7 +538,10 @@ async def bad_actors_analysis(req: AnalysisRequest) -> Dict[str, Any]:
         if data.empty:
             return {"status": "warning", "bad_actors": []}
 
-        return {"status": "success", "bad_actors": compute_bad_actors(data, req.compare_by)}
+        return {
+            "status": "success",
+            "bad_actors": compute_bad_actors(data, req.compare_by),
+        }
     except Exception as e:
         logger.error(f"Bad actors error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -715,14 +748,14 @@ async def kpi_trend(req: KpiTrendRequest) -> Dict[str, Any]:
 
     try:
         df = state.current_data.copy()
-        
+
         # Apply failure type filter if provided
         if req.failure_type:
             df = df[df["Type"] == req.failure_type]
-            
+
         if req.types_to_use:
             df = df[df["Type"].isin(req.types_to_use)]
-            
+
         if "Start_Date" not in df.columns:
             raise HTTPException(
                 status_code=400,
@@ -741,11 +774,15 @@ async def kpi_trend(req: KpiTrendRequest) -> Dict[str, Any]:
         req_equipment = req.equipment
         if isinstance(req_equipment, str):
             req_equipment = [req_equipment] if req_equipment else []
-        target_eqs = req_equipment if (req_equipment and len(req_equipment) > 0) else available_eqs
+        target_eqs = (
+            req_equipment
+            if (req_equipment and len(req_equipment) > 0)
+            else available_eqs
+        )
 
         # Calculate trends
         trends = {}
-        
+
         # 1. Global (of the selected equipments)
         df_selected = df[df["Equipment"].isin(target_eqs)] if target_eqs else df
         grouped_global = df_selected.groupby("month_period")
@@ -756,11 +793,17 @@ async def kpi_trend(req: KpiTrendRequest) -> Dict[str, Any]:
                 failures = int(len(group))
                 downtime = float(group["TTX"].sum()) if "TTX" in group.columns else 0.0
                 uptime = float(group["TBX"].sum()) if "TBX" in group.columns else 0.0
-                failures_mtbf = int((group["TBX"] > 0).sum()) if "TBX" in group.columns else failures
+                failures_mtbf = (
+                    int((group["TBX"] > 0).sum())
+                    if "TBX" in group.columns
+                    else failures
+                )
                 mtbf = float(uptime / failures_mtbf) if failures_mtbf > 0 else 0.0
                 mttr = float(downtime / failures) if failures > 0 else 0.0
                 total_time = uptime + downtime
-                availability = float((uptime / total_time) * 100.0) if total_time > 0.0 else 0.0
+                availability = (
+                    float((uptime / total_time) * 100.0) if total_time > 0.0 else 0.0
+                )
             else:
                 failures = 0
                 downtime = 0.0
@@ -768,14 +811,16 @@ async def kpi_trend(req: KpiTrendRequest) -> Dict[str, Any]:
                 mtbf = 0.0
                 mttr = 0.0
                 availability = 100.0
-            global_data.append({
-                "month": str(month),
-                "failures": failures,
-                "downtime": downtime,
-                "mtbf": mtbf,
-                "mttr": mttr,
-                "availability": availability
-            })
+            global_data.append(
+                {
+                    "month": str(month),
+                    "failures": failures,
+                    "downtime": downtime,
+                    "mtbf": mtbf,
+                    "mttr": mttr,
+                    "availability": availability,
+                }
+            )
         trends["Global"] = global_data
 
         # 2. Per Equipment
@@ -787,13 +832,25 @@ async def kpi_trend(req: KpiTrendRequest) -> Dict[str, Any]:
                 if month in grouped_eq.groups:
                     group = grouped_eq.get_group(month)
                     failures = int(len(group))
-                    downtime = float(group["TTX"].sum()) if "TTX" in group.columns else 0.0
-                    uptime = float(group["TBX"].sum()) if "TBX" in group.columns else 0.0
-                    failures_mtbf = int((group["TBX"] > 0).sum()) if "TBX" in group.columns else failures
+                    downtime = (
+                        float(group["TTX"].sum()) if "TTX" in group.columns else 0.0
+                    )
+                    uptime = (
+                        float(group["TBX"].sum()) if "TBX" in group.columns else 0.0
+                    )
+                    failures_mtbf = (
+                        int((group["TBX"] > 0).sum())
+                        if "TBX" in group.columns
+                        else failures
+                    )
                     mtbf = float(uptime / failures_mtbf) if failures_mtbf > 0 else 0.0
                     mttr = float(downtime / failures) if failures > 0 else 0.0
                     total_time = uptime + downtime
-                    availability = float((uptime / total_time) * 100.0) if total_time > 0.0 else 0.0
+                    availability = (
+                        float((uptime / total_time) * 100.0)
+                        if total_time > 0.0
+                        else 0.0
+                    )
                 else:
                     failures = 0
                     downtime = 0.0
@@ -801,21 +858,23 @@ async def kpi_trend(req: KpiTrendRequest) -> Dict[str, Any]:
                     mtbf = 0.0
                     mttr = 0.0
                     availability = 100.0
-                eq_data.append({
-                    "month": str(month),
-                    "failures": failures,
-                    "downtime": downtime,
-                    "mtbf": mtbf,
-                    "mttr": mttr,
-                    "availability": availability
-                })
+                eq_data.append(
+                    {
+                        "month": str(month),
+                        "failures": failures,
+                        "downtime": downtime,
+                        "mtbf": mtbf,
+                        "mttr": mttr,
+                        "availability": availability,
+                    }
+                )
             trends[str(eq)] = eq_data
 
         return {
             "status": "success",
             "trend": global_data,
             "trends": trends,
-            "months": [str(m) for m in all_months]
+            "months": [str(m) for m in all_months],
         }
     except Exception as e:
         logger.error(f"KPI trend analysis error: {str(e)}")
@@ -1172,7 +1231,9 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
             "Others",
         ]
 
-        models_to_run = req.types_to_use if req.types_to_use else [NLP_MODELS_TO_COMPARE[0]]
+        models_to_run = (
+            req.types_to_use if req.types_to_use else [NLP_MODELS_TO_COMPARE[0]]
+        )
         if "Todos los modelos" in models_to_run or "All" in models_to_run:
             models_to_run = NLP_MODELS_TO_COMPARE
 
@@ -1360,6 +1421,7 @@ async def comment_mining(req: AnalysisRequest) -> Dict[str, Any]:
 async def models_status() -> Dict[str, Any]:
     try:
         from huggingface_hub import scan_cache_dir
+
         cache_info = scan_cache_dir()
         cached_repo_sizes = {}
         for repo in cache_info.repos:
@@ -1370,6 +1432,7 @@ async def models_status() -> Dict[str, Any]:
 
     models = []
     from src.reliability_analysis.utils.config import NLP_MODELS_TO_COMPARE
+
     for model_name in NLP_MODELS_TO_COMPARE:
         if model_name == "Legacy Keyword NLP":
             downloaded = True
@@ -1377,19 +1440,18 @@ async def models_status() -> Dict[str, Any]:
         else:
             downloaded = model_name in cached_repo_sizes
             size_mb = cached_repo_sizes.get(model_name, 0.0)
-            
-        models.append({
-            "name": model_name,
-            "downloaded": downloaded,
-            "size_mb": round(size_mb, 1)
-        })
+
+        models.append(
+            {"name": model_name, "downloaded": downloaded, "size_mb": round(size_mb, 1)}
+        )
     return {"status": "success", "models": models}
+
 
 @router.post("/analysis/download-model", tags=["Analysis"])
 async def download_model(req: AnalysisRequest) -> Dict[str, Any]:
     from src.reliability_analysis.utils.config import NLP_MODELS_TO_COMPARE
     from src.reliability_analysis.analysis.hf_classifier import SemanticModelManager
-    
+
     models_to_run = req.types_to_use if req.types_to_use else [NLP_MODELS_TO_COMPARE[0]]
     if "Todos los modelos" in models_to_run or "All" in models_to_run:
         models_to_run = NLP_MODELS_TO_COMPARE
@@ -1402,7 +1464,7 @@ async def download_model(req: AnalysisRequest) -> Dict[str, Any]:
             # Getting the pipeline forces the download if it is missing
             SemanticModelManager.get_pipeline(model_name)
             downloaded_models.append(model_name)
-            
+
         return {"status": "success", "downloaded": downloaded_models}
     except Exception as e:
         logger.error(f"Error downloading models: {str(e)}")
@@ -1442,7 +1504,10 @@ async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
             fit_data["TBX"] = fit_data[target_col]
 
         if "TBX" not in fit_data.columns:
-            raise HTTPException(status_code=400, detail="No time-between-failures (TBX) column found in the dataset.")
+            raise HTTPException(
+                status_code=400,
+                detail="No time-between-failures (TBX) column found in the dataset.",
+            )
 
         censored_types = req.censored_failure_types or []
         min_tbx = float(req.min_tbx) if req.min_tbx is not None else 0.0
@@ -1462,38 +1527,55 @@ async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
         indices_to_drop = []
         for i, (orig_idx, row) in enumerate(intervals_df.iterrows()):
             tbx_val = float(row["TBX"])
-            is_baseline_start = (i == 0)
-            
+            is_baseline_start = i == 0
+
             is_manually_excluded = False
             if not is_baseline_start:
-                is_manually_excluded = (active_idx in excluded_idxs)
-                
-            is_included = (tbx_val >= min_tbx) and (tbx_val > 0.0) and not is_baseline_start and not is_manually_excluded
+                is_manually_excluded = active_idx in excluded_idxs
+
+            is_included = (
+                (tbx_val >= min_tbx)
+                and (tbx_val > 0.0)
+                and not is_baseline_start
+                and not is_manually_excluded
+            )
             if is_manually_excluded:
                 indices_to_drop.append(orig_idx)
-            
-            date_str = str(row["Start_Date"]) if "Start_Date" in row and pd.notnull(row["Start_Date"]) else "-"
+
+            date_str = (
+                str(row["Start_Date"])
+                if "Start_Date" in row and pd.notnull(row["Start_Date"])
+                else "-"
+            )
             type_val = str(row["Type"]) if "Type" in row else "-"
             mode_val = str(row["mdf"]) if "mdf" in row else "-"
-            
-            intervals_list.append({
-                "index": active_idx,
-                "date": date_str,
-                "tbx": tbx_val,
-                "type": type_val,
-                "mode": mode_val,
-                "included": is_included,
-                "is_baseline": is_baseline_start,
-                "manually_excluded": is_manually_excluded
-            })
+
+            intervals_list.append(
+                {
+                    "index": active_idx,
+                    "date": date_str,
+                    "tbx": tbx_val,
+                    "type": type_val,
+                    "mode": mode_val,
+                    "included": is_included,
+                    "is_baseline": is_baseline_start,
+                    "manually_excluded": is_manually_excluded,
+                }
+            )
             if not is_baseline_start:
                 active_idx += 1
 
         # Filter the fit dataset for Kijima fitting (must have TBX >= min_tbx)
         fit_data_for_fit = fit_data.drop(index=indices_to_drop)
-        fit_data_for_fit = fit_data_for_fit[(fit_data_for_fit["TBX"] >= min_tbx) & (fit_data_for_fit["TBX"] > 0)].copy()
+        fit_data_for_fit = fit_data_for_fit[
+            (fit_data_for_fit["TBX"] >= min_tbx) & (fit_data_for_fit["TBX"] > 0)
+        ].copy()
 
-        models_to_fit = req.models if req.models and isinstance(req.models, list) and len(req.models) > 0 else [1, 2, 3, 4, 5, 6]
+        models_to_fit = (
+            req.models
+            if req.models and isinstance(req.models, list) and len(req.models) > 0
+            else [1, 2, 3, 4, 5, 6]
+        )
 
         fitter = KijimaFitter()
         results = fitter.fit(
@@ -1509,19 +1591,29 @@ async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
         # Append Weibull baseline model
         try:
             w_fitter = ReliabilityFitter(fit_data_for_fit)
-            w_res = w_fitter.fit_weibull(column="TBX", censored_failure_types=censored_types)
+            w_res = w_fitter.fit_weibull(
+                column="TBX", censored_failure_types=censored_types
+            )
             if w_res and "beta" in w_res and "eta" in w_res:
                 w_beta = w_res["beta"]
                 w_eta = w_res["eta"]
 
                 from src.reliability_analysis.analysis.kijima_model import KijimaModelI
+
                 w_model = KijimaModelI(w_beta, w_eta, 0.0, 0.0)
 
-                df_prep = fit_data_for_fit.dropna(subset=["TBX", "Type" if "Type" in fit_data_for_fit.columns else "mdf"]).copy()
+                df_prep = fit_data_for_fit.dropna(
+                    subset=[
+                        "TBX",
+                        "Type" if "Type" in fit_data_for_fit.columns else "mdf",
+                    ]
+                ).copy()
                 df_prep = df_prep[df_prep["TBX"] > 0]
                 x_arr = df_prep["TBX"].to_numpy(dtype=float)
                 col_name = "Type" if "Type" in df_prep.columns else "mdf"
-                delta_arr = (~df_prep[col_name].isin(censored_types)).astype(float).to_numpy()
+                delta_arr = (
+                    (~df_prep[col_name].isin(censored_types)).astype(float).to_numpy()
+                )
 
                 w_curves = w_model.calculate_curves(x_arr, delta_arr)
 
@@ -1601,7 +1693,7 @@ async def rcm_suggest(req: RcmSuggestRequest) -> Dict[str, Any]:
         return {
             "status": "success",
             "equipment": req.equipment,
-            "rcm_sheets": customized
+            "rcm_sheets": customized,
         }
     except Exception as e:
         logger.error(f"RCM suggestion error: {str(e)}")
@@ -1612,7 +1704,7 @@ async def rcm_suggest(req: RcmSuggestRequest) -> Dict[str, Any]:
 async def fmea_calculate_rpn(req: FmecaRpnRequest) -> Dict[str, Any]:
     """Calculates Risk Priority Number (RPN) and assigns risk categories according to IEC 60812."""
     rpn = req.severity * req.occurrence * req.detection
-    
+
     if rpn < 50:
         category = "Bajo"
         color = "green"
@@ -1625,13 +1717,8 @@ async def fmea_calculate_rpn(req: FmecaRpnRequest) -> Dict[str, Any]:
     else:
         category = "Crítico"
         color = "red"
-        
-    return {
-        "status": "success",
-        "rpn": rpn,
-        "category": category,
-        "color": color
-    }
+
+    return {"status": "success", "rpn": rpn, "category": category, "color": color}
 
 
 def compute_ram_simulation(
@@ -1649,11 +1736,15 @@ def compute_ram_simulation(
         raise ValueError("No data available for the selected equipment")
 
     # Total failures and total downtime
-    num_failures = int(df["Type"].isin(["CORRECTIVO", "MI"]).sum()) if "Type" in df.columns else 0
+    num_failures = (
+        int(df["Type"].isin(["CORRECTIVO", "MI"]).sum()) if "Type" in df.columns else 0
+    )
     if num_failures == 0:
         num_failures = int(len(df))
 
-    actual_downtime = float(df["TTX"].sum()) if "TTX" in df.columns else float(num_failures * 2.0)
+    actual_downtime = (
+        float(df["TTX"].sum()) if "TTX" in df.columns else float(num_failures * 2.0)
+    )
 
     # Total simulation horizon (e.g. 1 year of operation: 8760 hours)
     horizon = 8760.0
@@ -1672,7 +1763,20 @@ def compute_ram_simulation(
 
     # Generate monthly timeline data for availability chart
     monthly_availability = []
-    months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    months = [
+        "Ene",
+        "Feb",
+        "Mar",
+        "Abr",
+        "May",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dic",
+    ]
 
     # Add random fluctuations around the average availability
     np.random.seed(42)
@@ -1684,16 +1788,22 @@ def compute_ram_simulation(
     # Vectorized downtime contributors (Bad Actors) using pandas groupby
     if full_data is not None and "Equipment" in full_data.columns:
         has_ttx = "TTX" in full_data.columns
-        bad_df = full_data.groupby("Equipment").agg(
-            downtime=("TTX", "sum") if has_ttx else ("Equipment", "count"),
-            failures=("Equipment", "count")
-        ).reset_index().sort_values(by="downtime", ascending=False).head(5)
+        bad_df = (
+            full_data.groupby("Equipment")
+            .agg(
+                downtime=("TTX", "sum") if has_ttx else ("Equipment", "count"),
+                failures=("Equipment", "count"),
+            )
+            .reset_index()
+            .sort_values(by="downtime", ascending=False)
+            .head(5)
+        )
 
         bad_actors_contrib = [
             {
                 "equipment": str(row["Equipment"]),
                 "downtime": round(float(row["downtime"]), 1),
-                "failures": int(row["failures"])
+                "failures": int(row["failures"]),
             }
             for _, row in bad_df.iterrows()
         ]
@@ -1743,26 +1853,43 @@ async def export_fmeca_report(records: List[Dict[str, Any]]) -> Response:
     """Exports FMECA records (IEC 60812) to a CSV formatted download."""
     import csv
     import io
+
     output = io.StringIO()
-    writer = csv.writer(output, delimiter=';')
-    writer.writerow(["Componente", "Modo de Falla", "Efecto", "Severidad (S)", "Ocurrencia (O)", "Deteccion (D)", "RPN", "Categoria", "Accion Recomendada"])
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(
+        [
+            "Componente",
+            "Modo de Falla",
+            "Efecto",
+            "Severidad (S)",
+            "Ocurrencia (O)",
+            "Deteccion (D)",
+            "RPN",
+            "Categoria",
+            "Accion Recomendada",
+        ]
+    )
     for r in records:
-        writer.writerow([
-            r.get("component", ""),
-            r.get("mode", ""),
-            r.get("effect", ""),
-            r.get("severity", 5),
-            r.get("occurrence", 5),
-            r.get("detection", 5),
-            r.get("rpn", 125),
-            r.get("category", "Medio"),
-            r.get("action", "")
-        ])
+        writer.writerow(
+            [
+                r.get("component", ""),
+                r.get("mode", ""),
+                r.get("effect", ""),
+                r.get("severity", 5),
+                r.get("occurrence", 5),
+                r.get("detection", 5),
+                r.get("rpn", 125),
+                r.get("category", "Medio"),
+                r.get("action", ""),
+            ]
+        )
     output.seek(0)
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=fmeca_report_iec60812.csv"}
+        headers={
+            "Content-Disposition": "attachment; filename=fmeca_report_iec60812.csv"
+        },
     )
 
 
@@ -1771,33 +1898,49 @@ async def export_rcm_report(req: RcmSuggestRequest) -> Response:
     """Exports RCM analysis (SAE JA1011) to a structured CSV download."""
     import csv
     import io
+
     if state.filter_manager is None or state.current_data is None:
         raise HTTPException(status_code=400, detail="No data loaded")
-    
+
     df = state.current_data[state.current_data["Equipment"] == req.equipment].copy()
-    comments = df["Comment"].dropna().astype(str).tolist() if "Comment" in df.columns else []
+    comments = (
+        df["Comment"].dropna().astype(str).tolist() if "Comment" in df.columns else []
+    )
     rcm_sheets = LlmService.get_rcm_suggestions(req.equipment, comments)
-    
+
     output = io.StringIO()
-    writer = csv.writer(output, delimiter=';')
-    writer.writerow(["Equipo", "Funcion Principal", "Falla Funcional", "Modo de Falla", "Efecto", "Tarea Preventiva", "Intervalo"])
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(
+        [
+            "Equipo",
+            "Funcion Principal",
+            "Falla Funcional",
+            "Modo de Falla",
+            "Efecto",
+            "Tarea Preventiva",
+            "Intervalo",
+        ]
+    )
     for sheet in rcm_sheets:
-        writer.writerow([
-            req.equipment,
-            sheet.get("function", ""),
-            sheet.get("functional_failure", ""),
-            sheet.get("failure_mode", ""),
-            sheet.get("failure_effect", ""),
-            sheet.get("task", ""),
-            sheet.get("interval", "")
-        ])
+        writer.writerow(
+            [
+                req.equipment,
+                sheet.get("function", ""),
+                sheet.get("functional_failure", ""),
+                sheet.get("failure_mode", ""),
+                sheet.get("failure_effect", ""),
+                sheet.get("task", ""),
+                sheet.get("interval", ""),
+            ]
+        )
     output.seek(0)
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=rcm_report_{req.equipment}.csv"}
+        headers={
+            "Content-Disposition": f"attachment; filename=rcm_report_{req.equipment}.csv"
+        },
     )
-
 
 
 @router.post("/analysis/rca/suggest", tags=["ISO Analysis"])
@@ -1818,7 +1961,7 @@ async def rca_suggest(req: RcaAnalysisRequest) -> Dict[str, Any]:
             "status": "success",
             "equipment": req.equipment,
             "five_whys": result.get("five_whys", []),
-            "ishikawa": result.get("ishikawa", {})
+            "ishikawa": result.get("ishikawa", {}),
         }
     except Exception as e:
         logger.error(f"RCA suggestion error: {str(e)}")
@@ -1852,11 +1995,15 @@ def _build_copilot_context_summary() -> str:
             if filter_state.get("types"):
                 active_filters.append(f"tipos={', '.join(filter_state['types'])}")
             if filter_state.get("failure_modes"):
-                active_filters.append(f"modos={', '.join(filter_state['failure_modes'])}")
+                active_filters.append(
+                    f"modos={', '.join(filter_state['failure_modes'])}"
+                )
 
             if active_filters:
                 parts.append(f"filtros activos: {'; '.join(active_filters)}")
-                parts.append(f"{filter_state.get('filtered_count', len(df))} registros tras filtros")
+                parts.append(
+                    f"{filter_state.get('filtered_count', len(df))} registros tras filtros"
+                )
         except Exception as ex:
             logger.warning(f"Could not read filter state for copilot context: {ex}")
 
@@ -1874,7 +2021,9 @@ async def copilot_chat(req: CopilotChatRequest) -> Dict[str, Any]:
         context_summary = _build_copilot_context_summary()
         history = req.history or []
 
-        response_text = LlmService.get_copilot_response(message, history, context_summary)
+        response_text = LlmService.get_copilot_response(
+            message, history, context_summary
+        )
 
         return {
             "status": "success",
@@ -1884,5 +2033,3 @@ async def copilot_chat(req: CopilotChatRequest) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Copilot chat error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
-
-

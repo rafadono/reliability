@@ -69,6 +69,7 @@ def _calculate_k2_td(
         v_prev = v_i
     return V
 
+
 @njit(cache=True)
 def _calculate_ki_td2(
     x: np.ndarray, delta: np.ndarray, ar: float, ap: float, br: float, bp: float
@@ -81,16 +82,17 @@ def _calculate_ki_td2(
         cum_t += x[i]
         q0 = ar if delta[i] > 0.5 else ap
         b = br if delta[i] > 0.5 else bp
-        
+
         q0_clamped = max(1e-6, min(1.0 - 1e-6, q0))
         C = np.log(q0_clamped / (1.0 - q0_clamped))
         z = C + b * cum_t
         q = 1.0 / (1.0 + np.exp(-z))
-        
+
         v_i = v_prev + q * x[i]
         V[i] = v_i
         v_prev = v_i
     return V
+
 
 @njit(cache=True)
 def _calculate_k2_td2(
@@ -104,17 +106,16 @@ def _calculate_k2_td2(
         cum_t += x[i]
         q0 = ar if delta[i] > 0.5 else ap
         b = br if delta[i] > 0.5 else bp
-        
+
         q0_clamped = max(1e-6, min(1.0 - 1e-6, q0))
         C = np.log(q0_clamped / (1.0 - q0_clamped))
         z = C + b * cum_t
         q = 1.0 / (1.0 + np.exp(-z))
-        
+
         v_i = q * (v_prev + x[i])
         V[i] = v_i
         v_prev = v_i
     return V
-
 
 
 @njit(parallel=True, cache=True)
@@ -174,7 +175,7 @@ def _neg_loglik_td(x, delta, beta, eta, ar, ap, br, bp, model_type):
 
         q0 = ar if di > 0.5 else ap
         b = br if di > 0.5 else bp
-        
+
         if model_type in (3, 4):
             q = 1.0 - (1.0 - q0) * np.exp(-b * cum_t)
         else:
@@ -182,7 +183,7 @@ def _neg_loglik_td(x, delta, beta, eta, ar, ap, br, bp, model_type):
             C = np.log(q0_clamped / (1.0 - q0_clamped))
             z = C + b * cum_t
             q = 1.0 / (1.0 + np.exp(-z))
-            
+
         if q < 0.0:
             q = 0.0
         elif q > 1.0:
@@ -296,6 +297,7 @@ class KijimaModel:
     Provides Weibull-based survival, hazard, MTBF, and goodness-of-fit methods.
     Subclasses implement virtual_age() using the appropriate recurrence.
     """
+
     def __init__(self, beta: float, eta: float, ar: float, ap: float):
         self.beta = float(beta)
         self.eta = float(eta)
@@ -373,6 +375,7 @@ class KijimaModel:
         Alternative to the analytical mean() — useful for validation.
         """
         from scipy.integrate import quad
+
         res, _ = quad(lambda t: t * self.pdf(t, V), 0, np.inf)
         return res
 
@@ -380,7 +383,9 @@ class KijimaModel:
         """Conditional PIT Kolmogorov-Smirnov test."""
         V = self.virtual_age(x, delta)
         V_prev = np.insert(V[:-1], 0, 0.0)
-        S = np.exp((V_prev / self.eta) ** self.beta - ((V_prev + x) / self.eta) ** self.beta)
+        S = np.exp(
+            (V_prev / self.eta) ** self.beta - ((V_prev + x) / self.eta) ** self.beta
+        )
         F = 1.0 - S
         F_fail = F[delta == 1]
         if len(F_fail) == 0:
@@ -404,7 +409,9 @@ class KijimaModel:
         T = np.cumsum(x)
         return float(np.mean(V / T))
 
-    def calculate_curves(self, x: np.ndarray, delta: np.ndarray, t_grid: np.ndarray = None) -> dict:
+    def calculate_curves(
+        self, x: np.ndarray, delta: np.ndarray, t_grid: np.ndarray = None
+    ) -> dict:
         """
         Calculate R(t), pdf(t), hazard(t) and virtual age arrays over a time grid.
         Uses Numba for acceleration.
@@ -439,6 +446,7 @@ class KijimaModel:
 
 class KijimaModelI(KijimaModel):
     """Kijima Model I: V_i = V_{i-1} + a_i * x_i"""
+
     def __init__(self, beta: float, eta: float, ar: float, ap: float):
         super().__init__(beta, eta, ar, ap)
         self.model_type = 1
@@ -450,6 +458,7 @@ class KijimaModelI(KijimaModel):
 
 class KijimaModelII(KijimaModel):
     """Kijima Model II: V_i = a * (V_{i-1} + x_i)"""
+
     def __init__(self, beta: float, eta: float, ar: float, ap: float):
         super().__init__(beta, eta, ar, ap)
         self.model_type = 2
@@ -461,7 +470,10 @@ class KijimaModelII(KijimaModel):
 
 class KijimaModelITD(KijimaModel):
     """Kijima Model I TD: V_i = V_{i-1} + q_i(T_i) * x_i"""
-    def __init__(self, beta: float, eta: float, ar: float, ap: float, br: float, bp: float):
+
+    def __init__(
+        self, beta: float, eta: float, ar: float, ap: float, br: float, bp: float
+    ):
         super().__init__(beta, eta, ar, ap)
         self.br = float(br)
         self.bp = float(bp)
@@ -474,7 +486,10 @@ class KijimaModelITD(KijimaModel):
 
 class KijimaModelIITD(KijimaModel):
     """Kijima Model II TD: V_i = q_i(T_i) * (V_{i-1} + x_i)"""
-    def __init__(self, beta: float, eta: float, ar: float, ap: float, br: float, bp: float):
+
+    def __init__(
+        self, beta: float, eta: float, ar: float, ap: float, br: float, bp: float
+    ):
         super().__init__(beta, eta, ar, ap)
         self.br = float(br)
         self.bp = float(bp)
@@ -487,7 +502,10 @@ class KijimaModelIITD(KijimaModel):
 
 class KijimaModelITD2(KijimaModel):
     """Kijima Model I TD2: V_i = V_{i-1} + q_i(T_i) * x_i"""
-    def __init__(self, beta: float, eta: float, ar: float, ap: float, br: float, bp: float):
+
+    def __init__(
+        self, beta: float, eta: float, ar: float, ap: float, br: float, bp: float
+    ):
         super().__init__(beta, eta, ar, ap)
         self.br = float(br)
         self.bp = float(bp)
@@ -500,7 +518,10 @@ class KijimaModelITD2(KijimaModel):
 
 class KijimaModelIITD2(KijimaModel):
     """Kijima Model II TD2: V_i = q_i(T_i) * (V_{i-1} + x_i)"""
-    def __init__(self, beta: float, eta: float, ar: float, ap: float, br: float, bp: float):
+
+    def __init__(
+        self, beta: float, eta: float, ar: float, ap: float, br: float, bp: float
+    ):
         super().__init__(beta, eta, ar, ap)
         self.br = float(br)
         self.bp = float(bp)

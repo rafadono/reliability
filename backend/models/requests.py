@@ -56,16 +56,13 @@ class WeibullFitRequest(BaseModel):
         description="Column to fit (TBX for Reliability, TTX for Maintainability)",
     )
     min_tbx: Optional[float] = Field(
-        0.0,
-        description="Minimum TBX (hours) to include in fit"
+        0.0, description="Minimum TBX (hours) to include in fit"
     )
     min_ttx: Optional[float] = Field(
-        0.0,
-        description="Minimum TTX (repair duration, hours) to include in fit"
+        0.0, description="Minimum TTX (repair duration, hours) to include in fit"
     )
     excluded_indices: Optional[List[int]] = Field(
-        None,
-        description="List of 1-based indices of intervals to exclude from fit"
+        None, description="List of 1-based indices of intervals to exclude from fit"
     )
 
 
@@ -88,7 +85,9 @@ class ConditionalReliabilityRequest(WeibullFitRequest):
 
 
 class CriticalityRequest(AnalysisRequest):
-    metric_x: str = Field("count", description="X-axis metric: 'count' or 'probability'")
+    metric_x: str = Field(
+        "count", description="X-axis metric: 'count' or 'probability'"
+    )
 
 
 class KijimaFitRequest(BaseModel):
@@ -102,20 +101,17 @@ class KijimaFitRequest(BaseModel):
         None, description="List of failure types to fit"
     )
     min_tbx: Optional[float] = Field(
-        0.0,
-        description="Minimum TBX (hours) to include in fit"
+        0.0, description="Minimum TBX (hours) to include in fit"
     )
     min_ttx: Optional[float] = Field(
-        0.0,
-        description="Minimum TTX (repair duration, hours) to include in fit"
+        0.0, description="Minimum TTX (repair duration, hours) to include in fit"
     )
     excluded_indices: Optional[List[int]] = Field(
-        None,
-        description="List of 1-based indices of intervals to exclude from fit"
+        None, description="List of 1-based indices of intervals to exclude from fit"
     )
     models: Optional[List[int]] = Field(
         None,
-        description="List of model indices (1..6) to fit. Only the requested models are computed."
+        description="List of model indices (1..6) to fit. Only the requested models are computed.",
     )
 
 
@@ -138,19 +134,28 @@ class FmecaRpnRequest(BaseModel):
 
 
 class RamSimulateRequest(BaseModel):
-    equipment: Optional[str] = Field(None, description="Equipment to simulate. If None, runs global plant simulation.")
-    preventive_efficiency: float = Field(0.8, ge=0.0, le=1.0, description="Efficiency of preventive maintenance (0 to 1)")
-    logistics_delay: float = Field(4.0, ge=0.0, description="Average logistics delay in hours")
+    equipment: Optional[str] = Field(
+        None,
+        description="Equipment to simulate. If None, runs global plant simulation.",
+    )
+    preventive_efficiency: float = Field(
+        0.8, ge=0.0, le=1.0, description="Efficiency of preventive maintenance (0 to 1)"
+    )
+    logistics_delay: float = Field(
+        4.0, ge=0.0, description="Average logistics delay in hours"
+    )
 
 
 class RcaAnalysisRequest(BaseModel):
     equipment: str = Field(..., description="Equipment name")
-    failure_event_date: Optional[str] = Field(None, description="Optional date of the failure event to analyze")
+    failure_event_date: Optional[str] = Field(
+        None, description="Optional date of the failure event to analyze"
+    )
 
 
 class CopilotChatRequest(BaseModel):
     message: str = Field(..., min_length=1, description="User's chat message")
     history: Optional[List[Dict[str, str]]] = Field(
-        None, description="Prior conversation turns as [{'role': 'user'|'assistant', 'content': '...'}]"
+        None,
+        description="Prior conversation turns as [{'role': 'user'|'assistant', 'content': '...'}]",
     )
-

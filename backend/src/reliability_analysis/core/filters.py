@@ -84,21 +84,27 @@ class FilterManager:
 
     def get_available_plants(self) -> List[str]:
         if "Plant" in self.data.columns:
-            return sorted([str(x) for x in self.data["Plant"].dropna().unique().tolist()])
+            return sorted(
+                [str(x) for x in self.data["Plant"].dropna().unique().tolist()]
+            )
         return []
 
     def get_equipment_for_plant(self) -> List[str]:
         df_filtered = self.data.copy()
         if self.state.plant and "Plant" in df_filtered.columns:
             df_filtered = df_filtered[df_filtered["Plant"].isin(self.state.plant)]
-        return sorted([str(x) for x in df_filtered["Equipment"].dropna().unique().tolist()])
+        return sorted(
+            [str(x) for x in df_filtered["Equipment"].dropna().unique().tolist()]
+        )
 
     def get_types_for_equipment(self) -> List[str]:
         df_filtered = self.data.copy()
         if self.state.plant and "Plant" in df_filtered.columns:
             df_filtered = df_filtered[df_filtered["Plant"].isin(self.state.plant)]
         if self.state.equipment:
-            df_filtered = df_filtered[df_filtered["Equipment"].isin(self.state.equipment)]
+            df_filtered = df_filtered[
+                df_filtered["Equipment"].isin(self.state.equipment)
+            ]
         return sorted([str(x) for x in df_filtered["Type"].dropna().unique().tolist()])
 
     def get_failure_modes_for_types(self) -> List[str]:
@@ -106,7 +112,9 @@ class FilterManager:
         if self.state.plant and "Plant" in df_filtered.columns:
             df_filtered = df_filtered[df_filtered["Plant"].isin(self.state.plant)]
         if self.state.equipment:
-            df_filtered = df_filtered[df_filtered["Equipment"].isin(self.state.equipment)]
+            df_filtered = df_filtered[
+                df_filtered["Equipment"].isin(self.state.equipment)
+            ]
         if self.state.types:
             df_filtered = df_filtered[df_filtered["Type"].isin(self.state.types)]
         return sorted([str(x) for x in df_filtered["mdf"].dropna().unique().tolist()])
@@ -116,7 +124,9 @@ class FilterManager:
         if self.state.plant and "Plant" in df_filtered.columns:
             df_filtered = df_filtered[df_filtered["Plant"].isin(self.state.plant)]
         if self.state.equipment:
-            df_filtered = df_filtered[df_filtered["Equipment"].isin(self.state.equipment)]
+            df_filtered = df_filtered[
+                df_filtered["Equipment"].isin(self.state.equipment)
+            ]
         if self.state.types:
             df_filtered = df_filtered[df_filtered["Type"].isin(self.state.types)]
         if self.state.failure_modes:

@@ -1,0 +1,13 @@
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+# Pinned explicitly to Ruff's long-standing conservative default (pyflakes + a
+# handful of pycodestyle checks). Without this file, `ruff check` falls back to
+# whatever Ruff's own default selection happens to be for the installed version
+# - and that default has changed between releases (e.g. 0.15.x -> 0.16.0 started
+# enabling flake8-bandit/blind-except/bugbear/pylint/async categories by
+# default), which silently turned a clean CI run into hundreds of "new"
+# findings with no code change involved. Pinning the selection here keeps
+# `ruff check` deterministic across Ruff versions.
+select = ["E4", "E7", "E9", "F"]

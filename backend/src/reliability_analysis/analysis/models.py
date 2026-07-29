@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 from reliability.Fitters import Fit_Everything
 from scipy.optimize import minimize
-from scipy.integrate import quad
 from src.reliability_analysis.utils.logger_config import setup_logging
 from src.reliability_analysis.utils.config import EXCLUDED_MODELS, KIJIMA_MODELS
 from src.reliability_analysis.analysis.kijima_model import (
@@ -207,6 +206,7 @@ class ReliabilityFitter:
             logger.error(f"Error in Weibull fit: {str(e)}")
             return None
 
+
 class KijimaFitter:
     """
     Implements Kijima I & II models.
@@ -226,12 +226,14 @@ class KijimaFitter:
         Fit Kijima parameters using optimization.
         """
         if model_type in (1, 2):
+
             def objective(p):
                 return _neg_loglik(x, delta, p[0], p[1], p[2], p[3], model_type)
 
             bounds = [(1e-6, None), (1e-6, None), (1e-2, 0.99), (1e-2, 0.99)]
             initial = [1.0, x.mean(), 0.5, 0.7]
         else:  # Time-dependent models 3, 4, 5, 6
+
             def objective(p):
                 return _neg_loglik_td(
                     x, delta, p[0], p[1], p[2], p[3], p[4], p[5], model_type
@@ -344,7 +346,9 @@ class KijimaFitter:
 
         x = df[column].to_numpy(dtype=float)
         if "Censored" in df.columns:
-            censored_mask = (df["Censored"] == 1) | df[col_to_check].isin(censored_types)
+            censored_mask = (df["Censored"] == 1) | df[col_to_check].isin(
+                censored_types
+            )
         else:
             censored_mask = df[col_to_check].isin(censored_types)
         delta = (~censored_mask).astype(float).to_numpy()

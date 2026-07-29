@@ -37,6 +37,7 @@ def test_ks_test_weibull_pit(mock_kstest):
 def test_ks_test_kijima_pit_via_model():
     """KS-PIT is now KijimaModel.ks_test_pit() — verify end-to-end."""
     from src.reliability_analysis.analysis.kijima_model import KijimaModelI
+
     x = np.array([100.0, 150.0, 200.0, 80.0])
     delta = np.array([1.0, 1.0, 0.0, 1.0])
     m = KijimaModelI(beta=1.5, eta=500.0, ar=0.2, ap=0.8)
@@ -48,6 +49,7 @@ def test_ks_test_kijima_pit_via_model():
 def test_r2_mrl_via_model():
     """R2-MRL is now KijimaModel.r2_mrl() — verify result is finite and <= 1."""
     from src.reliability_analysis.analysis.kijima_model import KijimaModelI
+
     x = np.array([100.0, 150.0, 200.0])
     delta = np.array([1.0, 0.0, 1.0])
     m = KijimaModelI(beta=1.5, eta=500.0, ar=0.2, ap=0.8)
@@ -59,6 +61,7 @@ def test_r2_mrl_via_model():
 def test_mean_residual_life_via_model():
     """mean_residual_life is now KijimaModel.mean_residual_life() — verify it agrees with analytical mean()."""
     from src.reliability_analysis.analysis.kijima_model import KijimaModelI
+
     m = KijimaModelI(beta=1.5, eta=500.0, ar=0.2, ap=0.8)
     V = 50.0
     num = m.mean_residual_life(V)

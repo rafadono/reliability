@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 from fastapi.testclient import TestClient
 from src.reliability_analysis.analysis.kijima_model import (
     KijimaModelI,
@@ -67,6 +66,7 @@ def test_kijima_all_model_types_virtual_age():
 def test_kijima_fitter_runs_and_contains_expected_output_structure():
     """KijimaFitter.fit() returns correct keys and array shapes."""
     import pandas as pd
+
     np.random.seed(42)
     n = 30
     tbx = np.random.exponential(100.0, n) + 1.0
@@ -74,15 +74,35 @@ def test_kijima_fitter_runs_and_contains_expected_output_structure():
     df = pd.DataFrame({"TBX": tbx, "mdf": mdf})
 
     fitter = KijimaFitter()
-    results = fitter.fit(df, column="TBX", censored_types=["Preventive"], models=[1, 2, 3, 4])
+    results = fitter.fit(
+        df, column="TBX", censored_types=["Preventive"], models=[1, 2, 3, 4]
+    )
 
     assert isinstance(results, list)
     assert len(results) == 4
 
     for res in results:
-        for key in ("model_name", "beta", "eta", "ar", "ap", "br", "bp",
-                    "AIC", "BIC", "p_value", "mean", "ks_stat", "std",
-                    "t", "R", "failure_rate", "pdf", "V", "T"):
+        for key in (
+            "model_name",
+            "beta",
+            "eta",
+            "ar",
+            "ap",
+            "br",
+            "bp",
+            "AIC",
+            "BIC",
+            "p_value",
+            "mean",
+            "ks_stat",
+            "std",
+            "t",
+            "R",
+            "failure_rate",
+            "pdf",
+            "V",
+            "T",
+        ):
             assert key in res
 
         assert len(res["t"]) == len(tbx) * 5 + 50
@@ -96,18 +116,20 @@ def test_kijima_fit_api_endpoint():
     import sys
     import io
     from pathlib import Path
+
     sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
     from app import app
 
     import httpx
+
     _orig_httpx_init = httpx.Client.__init__
+
     def _patched_httpx_init(self, *args, app=None, **kwargs):
         return _orig_httpx_init(self, *args, **kwargs)
+
     httpx.Client.__init__ = _patched_httpx_init
 
     client = TestClient(app)
-
-
 
     csv_content = (
         "Equipo;Tipo;Mdf;Dias;Censurado;Fecha;Comentario\n"
@@ -121,7 +143,9 @@ def test_kijima_fit_api_endpoint():
     files = {"file": ("test_kijima.csv", io.BytesIO(csv_content.encode()), "text/csv")}
     assert client.post("/api/upload", files=files).status_code == 200
 
-    response = client.post("/api/analysis/kijima-fit", json={"censored_failure_types": ["Preventive"]})
+    response = client.post(
+        "/api/analysis/kijima-fit", json={"censored_failure_types": ["Preventive"]}
+    )
     assert response.status_code == 200
 
     data = response.json()
@@ -129,5 +153,13 @@ def test_kijima_fit_api_endpoint():
     assert "models" in data
     assert len(data["models"]) == 7
     model_names = [m["model_name"] for m in data["models"]]
-    for name in ("Kijima I", "Kijima II", "Kijima I TD", "Kijima II TD", "Kijima I TD2 (Logistic)", "Kijima II TD2 (Logistic)", "Weibull"):
+    for name in (
+        "Kijima I",
+        "Kijima II",
+        "Kijima I TD",
+        "Kijima II TD",
+        "Kijima I TD2 (Logistic)",
+        "Kijima II TD2 (Logistic)",
+        "Weibull",
+    ):
         assert name in model_names

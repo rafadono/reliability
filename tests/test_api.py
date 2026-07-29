@@ -10,11 +10,15 @@ import httpx
 
 # Compatibility patch for Starlette TestClient with httpx >= 0.28.0
 _orig_httpx_init = httpx.Client.__init__
+
+
 def _patched_httpx_init(self, *args, app=None, **kwargs):
     return _orig_httpx_init(self, *args, **kwargs)
+
+
 httpx.Client.__init__ = _patched_httpx_init
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402 - must import after the patch above
 
 
 @pytest.fixture
@@ -27,8 +31,6 @@ def client():
     from app import app
 
     return TestClient(app)
-
-
 
 
 @pytest.fixture
@@ -100,7 +102,8 @@ class TestAPIEndpoints:
     def test_criticality_plot_analysis(self, client: TestClient):
         """Test Criticality plot analysis endpoint."""
         response = client.post(
-            "/api/analysis/criticality-plot", json={"compare_by": "mode", "metric_x": "count"}
+            "/api/analysis/criticality-plot",
+            json={"compare_by": "mode", "metric_x": "count"},
         )
         assert response.status_code == 200
         data = response.json()
@@ -124,7 +127,10 @@ class TestAPIEndpoints:
         )
         assert response.status_code == 200
         assert "access-control-allow-origin" in response.headers
-        assert response.headers["access-control-allow-origin"] in ["http://localhost", "*"]
+        assert response.headers["access-control-allow-origin"] in [
+            "http://localhost",
+            "*",
+        ]
 
     def test_kpi_trend_analysis(self, client: TestClient):
         """Test KPI Trend analysis endpoint."""
@@ -148,16 +154,16 @@ class TestAPIEndpoints:
         assert "coverage" in data
         assert "results" in data
         assert "Legacy Keyword NLP" in data["results"]
-        
+
         legacy_results = data["results"]["Legacy Keyword NLP"]
         assert "keywords" in legacy_results
         assert "categories" in legacy_results
         assert "execution_time_seconds" in legacy_results
-        
+
         if len(legacy_results["keywords"]) > 0:
             assert "word" in legacy_results["keywords"][0]
             assert "count" in legacy_results["keywords"][0]
-        
+
         if len(legacy_results["categories"]) > 0:
             assert "category" in legacy_results["categories"][0]
             assert "top_types" in legacy_results["categories"][0]
@@ -167,10 +173,7 @@ class TestAPIEndpoints:
         """Test Weibull Fit endpoint exposes MTBF & KS metrics."""
         response = client.post(
             "/api/analysis/fit",
-            json={
-                "target_column": "Days",
-                "censored_failure_types": []
-            }
+            json={"target_column": "Days", "censored_failure_types": []},
         )
         assert response.status_code == 200
         data = response.json()
@@ -187,8 +190,7 @@ class TestAPIEndpoints:
     def test_rcm_suggest(self, client: TestClient):
         """Test RCM suggestion endpoint."""
         response = client.post(
-            "/api/analysis/rcm/suggest",
-            json={"equipment": "Motor A"}
+            "/api/analysis/rcm/suggest", json={"equipment": "Motor A"}
         )
         assert response.status_code == 200
         data = response.json()
@@ -202,7 +204,7 @@ class TestAPIEndpoints:
         """Test FMEA RPN calculation according to IEC 60812."""
         response = client.post(
             "/api/analysis/fmea/calculate-rpn",
-            json={"severity": 8, "occurrence": 4, "detection": 3}
+            json={"severity": 8, "occurrence": 4, "detection": 3},
         )
         assert response.status_code == 200
         data = response.json()
@@ -213,7 +215,7 @@ class TestAPIEndpoints:
         # Test critical category
         response_crit = client.post(
             "/api/analysis/fmea/calculate-rpn",
-            json={"severity": 10, "occurrence": 10, "detection": 3}
+            json={"severity": 10, "occurrence": 10, "detection": 3},
         )
         assert response_crit.json()["rpn"] == 300
         assert response_crit.json()["category"] == "Crítico"
@@ -225,8 +227,8 @@ class TestAPIEndpoints:
             json={
                 "equipment": "Motor A",
                 "preventive_efficiency": 0.8,
-                "logistics_delay": 4.0
-            }
+                "logistics_delay": 4.0,
+            },
         )
         assert response.status_code == 200
         data = response.json()
@@ -239,8 +241,7 @@ class TestAPIEndpoints:
     def test_rca_suggest(self, client: TestClient):
         """Test RCA suggestion (Ishikawa & 5 Whys) according to IEC 62740."""
         response = client.post(
-            "/api/analysis/rca/suggest",
-            json={"equipment": "Motor A"}
+            "/api/analysis/rca/suggest", json={"equipment": "Motor A"}
         )
         assert response.status_code == 200
         data = response.json()
@@ -254,14 +255,30 @@ class TestAPIEndpoints:
         """Test execution, save, list, and load flows of the Reliability Workbench."""
         pipeline_data = {
             "nodes": [
-                {"id": "src-1", "type": "dataSource", "data": {}, "x": 50.0, "y": 150.0},
-                {"id": "flt-1", "type": "filter", "data": {"equipment": "Motor A", "type": "Mechanical", "censored": "0"}, "x": 250.0, "y": 150.0},
-                {"id": "wb-1", "type": "weibull", "data": {}, "x": 450.0, "y": 150.0}
+                {
+                    "id": "src-1",
+                    "type": "dataSource",
+                    "data": {},
+                    "x": 50.0,
+                    "y": 150.0,
+                },
+                {
+                    "id": "flt-1",
+                    "type": "filter",
+                    "data": {
+                        "equipment": "Motor A",
+                        "type": "Mechanical",
+                        "censored": "0",
+                    },
+                    "x": 250.0,
+                    "y": 150.0,
+                },
+                {"id": "wb-1", "type": "weibull", "data": {}, "x": 450.0, "y": 150.0},
             ],
             "edges": [
                 {"id": "e1", "source": "src-1", "target": "flt-1"},
-                {"id": "e2", "source": "flt-1", "target": "wb-1"}
-            ]
+                {"id": "e2", "source": "flt-1", "target": "wb-1"},
+            ],
         }
 
         # 1. Execute pipeline
@@ -282,7 +299,7 @@ class TestAPIEndpoints:
         save_data = {
             "name": "test_persistence_pipeline",
             "nodes": pipeline_data["nodes"],
-            "edges": pipeline_data["edges"]
+            "edges": pipeline_data["edges"],
         }
         response_save = client.post("/api/workbench/save", json=save_data)
         assert response_save.status_code == 200
@@ -300,5 +317,3 @@ class TestAPIEndpoints:
         assert loaded["status"] == "success"
         assert loaded["pipeline"]["name"] == "test_persistence_pipeline"
         assert len(loaded["pipeline"]["nodes"]) == 3
-
-

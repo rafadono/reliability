@@ -43,7 +43,6 @@ class DataProcessor:
 
         result = result.rename(columns=rename_dict)
 
-
         invalid_dates_count = 0
         if "Date" in result.columns and "Time" in result.columns:
             was_missing = result["Date"].isna() | (

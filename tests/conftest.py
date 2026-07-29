@@ -14,8 +14,12 @@ import httpx
 
 # Compatibility patch for Starlette TestClient with httpx >= 0.28.0
 _orig_httpx_init = httpx.Client.__init__
+
+
 def _patched_httpx_init(self, *args, app=None, **kwargs):
     return _orig_httpx_init(self, *args, **kwargs)
+
+
 httpx.Client.__init__ = _patched_httpx_init
 
 project_root = Path(__file__).parent.parent
@@ -96,5 +100,5 @@ def small_data():
 def client():
     from fastapi.testclient import TestClient
     from backend.app import app
-    return TestClient(app)
 
+    return TestClient(app)

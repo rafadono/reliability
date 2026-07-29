@@ -50,7 +50,14 @@ EXCLUDED_MODELS = [
     "Beta_2P",
 ]
 
-KIJIMA_MODELS = [1, 2, 3, 4, 5, 6]  # Kijima I, II, I TD, II TD, I TD2 (Logistic), II TD2 (Logistic)
+KIJIMA_MODELS = [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+]  # Kijima I, II, I TD, II TD, I TD2 (Logistic), II TD2 (Logistic)
 
 PLOT_WIDTH = 1000
 PLOT_HEIGHT = 600
@@ -64,7 +71,9 @@ NLP_MODELS_TO_COMPARE = [
 ]
 
 # LLM configuration for Vendor-Agnostic AI Copilot
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "mock").lower()  # 'mock', 'gemini', 'openai', 'ollama'
+LLM_PROVIDER = os.getenv(
+    "LLM_PROVIDER", "mock"
+).lower()  # 'mock', 'gemini', 'openai', 'ollama'
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")

@@ -22,7 +22,7 @@ async def upload_file(file: UploadFile = File(...)) -> UploadResponse:
     """
     try:
         contents = await file.read()
-        
+
         # Multi-encoding decode fallback
         contents_str = None
         for enc in ["utf-8-sig", "utf-8", "latin1", "cp1252"]:
@@ -31,7 +31,7 @@ async def upload_file(file: UploadFile = File(...)) -> UploadResponse:
                 break
             except (UnicodeDecodeError, AttributeError):
                 continue
-                
+
         if contents_str is None:
             contents_str = contents.decode("utf-8", errors="replace")
 
@@ -45,7 +45,7 @@ async def upload_file(file: UploadFile = File(...)) -> UploadResponse:
                     break
             except Exception:
                 continue
-                
+
         if df is None:
             df = pd.read_csv(io.StringIO(contents_str), sep=None, engine="python")
 
@@ -102,9 +102,21 @@ async def get_available_filters() -> Dict[str, List[str]]:
         }
 
     try:
-        eq_list = [str(x) for x in state.current_data["Equipment"].dropna().unique().tolist()] if "Equipment" in state.current_data.columns else []
-        type_list = [str(x) for x in state.current_data["Type"].dropna().unique().tolist()] if "Type" in state.current_data.columns else []
-        mdf_list = [str(x) for x in state.current_data["mdf"].dropna().unique().tolist()] if "mdf" in state.current_data.columns else []
+        eq_list = (
+            [str(x) for x in state.current_data["Equipment"].dropna().unique().tolist()]
+            if "Equipment" in state.current_data.columns
+            else []
+        )
+        type_list = (
+            [str(x) for x in state.current_data["Type"].dropna().unique().tolist()]
+            if "Type" in state.current_data.columns
+            else []
+        )
+        mdf_list = (
+            [str(x) for x in state.current_data["mdf"].dropna().unique().tolist()]
+            if "mdf" in state.current_data.columns
+            else []
+        )
 
         return {
             "equipment": sorted(eq_list),
@@ -114,4 +126,3 @@ async def get_available_filters() -> Dict[str, List[str]]:
     except Exception as e:
         logger.error(f"Get available filters error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
-
