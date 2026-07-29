@@ -7,6 +7,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
           </svg>
           {{ $t('charts.iso_analysis.rcm_title') }}
+          <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-slate-700 px-2 py-0.5 rounded-full">Norma: {{ sharedState.rcm?.standard || 'SAE JA1011' }}</span>
         </h4>
         <p class="text-xs text-gray-500 dark:text-slate-400">{{ $t('charts.iso_analysis.rcm_desc') }}</p>
       </div>
@@ -192,21 +193,23 @@ const currentSheet = computed(() => {
   return rcmSheets.value[activeSheetIndex.value]
 })
 
+const mapRcmSheets = (sheets) => (sheets || []).map(sheet => ({
+  function: sheet.function || '',
+  functional_failure: sheet.functional_failure || '',
+  mode: sheet.mode || '',
+  effect: sheet.effect || '',
+  consequence: sheet.consequence || '',
+  proactive_task: sheet.proactive_task || '',
+  alternative_action: sheet.alternative_action || 'Operar hasta la falla / Evaluación de rediseño'
+}))
+
 const generateRcmSuggestions = async () => {
   if (!selectedEquipment.value) return
   loading.value = true
   try {
     const response = await apiService.getRcmSuggestions(selectedEquipment.value)
     if (response.data.status === 'success') {
-      rcmSheets.value = response.data.rcm_sheets.map(sheet => ({
-        function: sheet.function || '',
-        functional_failure: sheet.functional_failure || '',
-        mode: sheet.mode || '',
-        effect: sheet.effect || '',
-        consequence: sheet.consequence || '',
-        proactive_task: sheet.proactive_task || '',
-        alternative_action: sheet.alternative_action || 'Operar hasta la falla / Evaluación de rediseño'
-      }))
+      rcmSheets.value = mapRcmSheets(response.data.rcm_sheets)
       activeSheetIndex.value = 0
       currentStep.value = 0
     }
@@ -245,6 +248,15 @@ watch(() => sharedState.filters, (newVal) => {
         generateRcmSuggestions()
       }
     }
+  }
+}, { deep: true, immediate: true })
+
+watch(() => sharedState.rcm, (newVal) => {
+  if (newVal && !newVal.error && Array.isArray(newVal.rcm_sheets)) {
+    rcmSheets.value = mapRcmSheets(newVal.rcm_sheets)
+    selectedEquipment.value = newVal.equipment || selectedEquipment.value
+    activeSheetIndex.value = 0
+    currentStep.value = 0
   }
 }, { deep: true, immediate: true })
 </script>

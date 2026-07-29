@@ -1,46 +1,43 @@
 <template>
-  <div class="relative overflow-hidden w-full h-full">
-    <!-- Contenido Original (Borrosidad si no está activo) -->
-    <div :class="[
-      'transition-all duration-500 w-full h-full',
-      !active ? 'filter blur-sm pointer-events-none select-none opacity-50' : ''
-    ]">
-      <slot />
-    </div>
+  <div v-if="active" class="w-full">
+    <slot />
+  </div>
 
-    <!-- Capa de Bloqueo Glassmorphic -->
-    <div 
-      v-if="!active" 
-      class="absolute inset-0 bg-slate-950/20 dark:bg-slate-950/40 backdrop-blur-[4px] flex items-center justify-center p-6 z-20 transition-all duration-500 animate-fade-in"
-    >
-      <div class="bg-white/90 dark:bg-slate-900/90 border border-gray-200/80 dark:border-slate-700/80 rounded-2xl p-6 shadow-2xl max-w-sm text-center transform scale-100 transition-all duration-300 backdrop-blur-md">
-        <!-- Icono de Candado con Brillo Pulsante -->
-        <div class="w-12 h-12 bg-indigo-500/10 dark:bg-indigo-500/20 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
-          <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <div 
+    v-else 
+    class="bg-slate-50/90 dark:bg-slate-900/50 border border-dashed border-gray-300 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between min-h-[135px] transition-all duration-300 shadow-sm hover:border-indigo-400/60 dark:hover:border-indigo-500/50 hover:shadow-md group"
+  >
+    <div class="space-y-2">
+      <div class="flex items-center justify-between gap-2">
+        <div class="w-8 h-8 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         </div>
+        <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 rounded-full shrink-0">
+          No configurado
+        </span>
+      </div>
 
-        <!-- Titulo y Mensaje Localizado -->
-        <h4 class="text-base font-extrabold text-gray-900 dark:text-white mb-2">
-          {{ $t('workbench.locked_title') }}
+      <div>
+        <h4 class="text-xs font-bold text-gray-800 dark:text-slate-200 line-clamp-1">
+          {{ title || defaultTitles[nodeType] || 'Módulo de Análisis' }}
         </h4>
-        <p class="text-xs text-gray-600 dark:text-slate-300 leading-relaxed mb-5 font-medium">
-          {{ $t(`workbench.locked_${nodeType}`) }}
+        <p class="text-[11px] text-gray-500 dark:text-slate-400 line-clamp-2 mt-1 leading-snug">
+          Agregue y ejecute este bloque en el Workbench para activarlo.
         </p>
-
-        <!-- Botón de Acción para volver al Workbench -->
-        <button 
-          @click="$emit('navigate', 'workbench')"
-          class="w-full py-2 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-1.5"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-          </svg>
-          {{ $t('workbench.go_to_workbench') }}
-        </button>
       </div>
     </div>
+
+    <button 
+      @click="$emit('navigate', 'workbench')"
+      class="mt-3 w-full py-1.5 px-3 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 rounded-lg text-[11px] font-semibold transition-all active:scale-95 flex items-center justify-center gap-1.5"
+    >
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+      Configurar en Workbench
+    </button>
   </div>
 </template>
 
@@ -53,23 +50,25 @@ defineProps({
   nodeType: {
     type: String,
     required: true
+  },
+  title: {
+    type: String,
+    default: ''
   }
 })
 
 defineEmits(['navigate'])
+
+const defaultTitles = {
+  pareto: 'Análisis de Pareto (80/20)',
+  jackknife: 'Diagrama Jackknife (Criticidad RCM)',
+  criticality: 'Matriz de Criticidad 3D',
+  weibull_kijima: 'Ajuste Weibull & Reparación Kijima',
+  event_plot: 'Línea de Eventos y TBF',
+  ram_sim: 'Simulador RAM Monte Carlo',
+  apm: 'APM Bad Actors y Crecimiento',
+  trend: 'Tendencia de KPIs y Confiabilidad',
+  rcm_fmeca: 'Análisis RCM & FMECA (JA1011 / IEC 60812)',
+  rca_fta: 'Causa Raíz RCA y Árbol de Fallas FTA'
+}
 </script>
-
-<style scoped>
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-</style>

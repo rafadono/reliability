@@ -19,7 +19,7 @@ class DataProcessor:
 
         rename_dict = {}
         for col in result.columns:
-            col_lower = col.lower()
+            col_lower = str(col).strip().lstrip("\ufeff").lower()
             if col_lower in ["equipo", "equipment"]:
                 rename_dict[col] = "Equipment"
             elif col_lower in ["tipo", "type"]:
@@ -40,6 +40,7 @@ class DataProcessor:
                 rename_dict[col] = "Comment"
 
         result = result.rename(columns=rename_dict)
+
 
         if "Date" in result.columns and "Time" in result.columns:
             result["Start_Date"] = pd.to_datetime(

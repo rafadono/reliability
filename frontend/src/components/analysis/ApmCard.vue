@@ -14,6 +14,10 @@
         <p class="text-sm text-gray-500 dark:text-slate-400">{{ $t('charts.apm.desc') }}</p>
       </div>
       <div class="flex gap-2 bg-gray-50 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
+        <select v-model="compareBy" @change="loadAnalysis" class="text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500">
+          <option value="equipment">Equipo</option>
+          <option value="type">Tipo</option>
+        </select>
         <select v-model="localFilters.equipment" class="text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500">
           <option value="">{{ $t('charts.kpi.all_equip') }}</option>
           <option v-for="eq in availableEquipment" :key="eq" :value="eq">{{ eq }}</option>
@@ -79,6 +83,7 @@
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '../../api'
+import { sharedState } from '../../sharedState'
 import { Chart } from 'chart.js/auto'
 
 const { t } = useI18n()
@@ -92,6 +97,7 @@ const isCollapsed = ref(false)
 
 const localFilters = ref({ equipment: '' })
 const selectedTypes = ref([])
+const compareBy = ref('equipment')
 const badActorsData = ref([])
 const growthChartRef = ref(null)
 let growthChartInstance = null
@@ -108,18 +114,35 @@ const loadAnalysis = async () => {
     
     const targetTypes = selectedTypes.value.length > 0 ? selectedTypes.value : null
     const [badActorsRes, growthRes] = await Promise.all([
-      apiService.getBadActors(undefined, undefined, 'equipment', targetTypes),
+      apiService.getBadActors(undefined, undefined, compareBy.value, targetTypes),
       apiService.getGrowthAnalysis(undefined, undefined, targetTypes)
     ])
-    
+
     badActorsData.value = badActorsRes.data.bad_actors || []
-    
+
     if (growthRes.data.cumulative_time) {
       lastGrowthData = growthRes.data
       await nextTick()
       renderGrowthChart(growthRes.data)
     }
   } catch (err) { console.error('Error loading APM analysis:', err) }
+}
+
+// Loads only the growth/cumulative-failures chart, used when bad_actors data
+// is already available from a Workbench execution (sharedState.apm) so we
+// avoid a redundant duplicate getBadActors call.
+const loadGrowthOnly = async () => {
+  try {
+    await apiService.setFilters(localFilters.value.equipment)
+    const targetTypes = selectedTypes.value.length > 0 ? selectedTypes.value : null
+    const growthRes = await apiService.getGrowthAnalysis(undefined, undefined, targetTypes)
+
+    if (growthRes.data.cumulative_time) {
+      lastGrowthData = growthRes.data
+      await nextTick()
+      renderGrowthChart(growthRes.data)
+    }
+  } catch (err) { console.error('Error loading APM growth analysis:', err) }
 }
 
 const renderGrowthChart = (data) => {
@@ -179,10 +202,28 @@ const handleThemeChange = () => {
   }
 }
 
+const applyWorkbenchApm = async () => {
+  const config = sharedState.nodeConfigs['apm']
+  if (config?.compare_by) compareBy.value = config.compare_by
+  if (sharedState.apm) {
+    badActorsData.value = sharedState.apm.bad_actors || []
+    await loadGrowthOnly()
+    return true
+  }
+  return false
+}
+
 onMounted(async () => {
-  await loadAnalysis()
+  if (!(await applyWorkbenchApm())) {
+    await loadAnalysis()
+  }
   window.addEventListener('theme-changed', handleThemeChange)
 })
+
+// Kept alive by <keep-alive> in Dashboard.vue — react to later Workbench runs too.
+watch(() => sharedState.apm, (newVal) => {
+  if (newVal) applyWorkbenchApm()
+}, { deep: true })
 
 onUnmounted(() => {
   window.removeEventListener('theme-changed', handleThemeChange)

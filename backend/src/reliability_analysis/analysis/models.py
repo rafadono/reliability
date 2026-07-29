@@ -343,7 +343,11 @@ class KijimaFitter:
         df = df[df[column] > 0]
 
         x = df[column].to_numpy(dtype=float)
-        delta = (~df[col_to_check].isin(censored_types)).astype(float).to_numpy()
+        if "Censored" in df.columns:
+            censored_mask = (df["Censored"] == 1) | df[col_to_check].isin(censored_types)
+        else:
+            censored_mask = df[col_to_check].isin(censored_types)
+        delta = (~censored_mask).astype(float).to_numpy()
 
         # Normalize input models
         models_list = models if isinstance(models, (list, tuple)) else [models]

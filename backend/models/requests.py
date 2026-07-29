@@ -10,12 +10,14 @@ class UploadResponse(BaseModel):
 
 
 class FilterOptions(BaseModel):
+    plants: Optional[List[str]] = None
     equipment: Optional[List[str]] = None
     types: Optional[List[str]] = None
     failure_modes: Optional[List[str]] = None
 
 
 class FilterRequest(BaseModel):
+    plant: Optional[str] = Field(None, description="Plant name")
     equipment: Optional[str] = Field(None, description="Equipment name")
     failure_type: Optional[str] = Field(None, description="Failure type")
     failure_mode: Optional[str] = Field(None, description="Failure mode")
@@ -54,6 +56,10 @@ class WeibullFitRequest(BaseModel):
     min_tbx: Optional[float] = Field(
         0.0,
         description="Minimum TBX (hours) to include in fit"
+    )
+    min_ttx: Optional[float] = Field(
+        0.0,
+        description="Minimum TTX (repair duration, hours) to include in fit"
     )
     excluded_indices: Optional[List[int]] = Field(
         None,
@@ -97,9 +103,17 @@ class KijimaFitRequest(BaseModel):
         0.0,
         description="Minimum TBX (hours) to include in fit"
     )
+    min_ttx: Optional[float] = Field(
+        0.0,
+        description="Minimum TTX (repair duration, hours) to include in fit"
+    )
     excluded_indices: Optional[List[int]] = Field(
         None,
         description="List of 1-based indices of intervals to exclude from fit"
+    )
+    models: Optional[List[int]] = Field(
+        None,
+        description="List of model indices (1..6) to fit. Only the requested models are computed."
     )
 
 

@@ -75,6 +75,20 @@
 
       <!-- Columna 2: Kpis del Resultado -->
       <div class="lg:col-span-2 space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-2" v-if="results.standard || results.applied_config">
+          <span
+            v-if="results.standard"
+            class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 rounded-lg px-2.5 py-1"
+          >
+            {{ results.standard }}
+          </span>
+          <span
+            v-if="results.applied_config"
+            class="text-[10px] text-gray-400 dark:text-slate-500"
+          >
+            Config aplicada: Eficiencia Preventiva {{ Math.round(results.applied_config.preventive_efficiency * 100) }}% · Demora Logística {{ results.applied_config.logistics_delay }}h
+          </span>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Tarjeta Disponibilidad -->
           <div class="bg-gray-50 dark:bg-slate-900/20 border border-gray-100 dark:border-slate-800 rounded-xl p-4 flex flex-col justify-between">
@@ -253,10 +267,25 @@ let isSyncing = false
 
 watch(() => sharedState.ram, (newVal) => {
   if (newVal) {
-    preventiveEfficiency.value = newVal.preventiveEfficiency
-    logisticsDelay.value = newVal.logisticsDelay
-    if (newVal.results) {
-      results.value = newVal.results
+    results.value = { ...newVal }
+  }
+}, { deep: true, immediate: true })
+
+watch(() => sharedState.nodeConfigs && sharedState.nodeConfigs['ram'], (newConfig) => {
+  if (newConfig) {
+    if (newConfig.preventive_efficiency !== undefined && preventiveEfficiency.value !== newConfig.preventive_efficiency) {
+      isSyncing = true
+      preventiveEfficiency.value = newConfig.preventive_efficiency
+      nextTick(() => {
+        isSyncing = false
+      })
+    }
+    if (newConfig.logistics_delay !== undefined && logisticsDelay.value !== newConfig.logistics_delay) {
+      isSyncing = true
+      logisticsDelay.value = newConfig.logistics_delay
+      nextTick(() => {
+        isSyncing = false
+      })
     }
   }
 }, { deep: true, immediate: true })

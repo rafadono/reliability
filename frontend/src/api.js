@@ -24,10 +24,20 @@ export const apiService = {
     })
   },
 
-  getFilters(equipment, failureType) {
-    return api.get('/filters', {
-      params: { equipment, failure_type: failureType }
-    })
+  getFilters(plant, equipment, failureType) {
+    const params = {}
+    if (plant) params.plant = plant
+    if (equipment) params.equipment = equipment
+    if (failureType) {
+      if (Array.isArray(failureType)) {
+        if (failureType.length > 0) {
+          params.failure_type = failureType.join(',')
+        }
+      } else {
+        params.failure_type = failureType
+      }
+    }
+    return api.get('/filters', { params })
   },
 
   setFilters(equipment, failureType, failureMode) {
@@ -40,6 +50,10 @@ export const apiService = {
 
   getAvailableFilters() {
     return api.get('/data/available-filters')
+  },
+
+  getSummaryStats() {
+    return api.get('/stats/summary')
   },
 
   resetFilters() {
@@ -72,7 +86,7 @@ export const apiService = {
     })
   },
 
-  fitData(equipment, failureType, typesToFit = null, censoredFailureTypes = null, targetColumn = 'TBX', minTbx = 0.0, excludedIndices = null) {
+  fitData(equipment, failureType, typesToFit = null, censoredFailureTypes = null, targetColumn = 'TBX', minTbx = 0.0, excludedIndices = null, minTtx = 0.0) {
     return api.post('/analysis/fit', {
       equipment,
       failure_type: failureType,
@@ -80,18 +94,21 @@ export const apiService = {
       censored_failure_types: censoredFailureTypes,
       target_column: targetColumn,
       min_tbx: minTbx,
+      min_ttx: minTtx,
       excluded_indices: excludedIndices
     })
   },
 
-  fitKijima(equipment, failureType, typesToFit = null, censoredFailureTypes = null, minTbx = 0.0, excludedIndices = null) {
+  fitKijima(equipment, failureType, typesToFit = null, censoredFailureTypes = null, minTbx = 0.0, excludedIndices = null, models = null, minTtx = 0.0) {
     return api.post('/analysis/kijima-fit', {
       equipment,
       failure_type: failureType,
       types_to_fit: typesToFit,
       censored_failure_types: censoredFailureTypes,
       min_tbx: minTbx,
-      excluded_indices: excludedIndices
+      min_ttx: minTtx,
+      excluded_indices: excludedIndices,
+      models: models
     })
   },
 
@@ -202,5 +219,9 @@ export const apiService = {
 
   loadWorkbenchPipeline(name) {
     return api.get(`/workbench/load/${name}`)
+  },
+
+  getWorkbenchLogs() {
+    return api.get('/workbench/logs')
   }
 }

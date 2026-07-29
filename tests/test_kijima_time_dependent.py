@@ -99,7 +99,15 @@ def test_kijima_fit_api_endpoint():
     sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
     from app import app
 
+    import httpx
+    _orig_httpx_init = httpx.Client.__init__
+    def _patched_httpx_init(self, *args, app=None, **kwargs):
+        return _orig_httpx_init(self, *args, **kwargs)
+    httpx.Client.__init__ = _patched_httpx_init
+
     client = TestClient(app)
+
+
 
     csv_content = (
         "Equipo;Tipo;Mdf;Dias;Censurado;Fecha;Comentario\n"

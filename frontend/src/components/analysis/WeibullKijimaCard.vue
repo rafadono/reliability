@@ -44,6 +44,10 @@
           <label class="text-xs font-semibold text-gray-600 dark:text-slate-300">{{ $t('charts.kijima.min_tbx_label') }}:</label>
           <input type="number" v-model.number="minTbx" min="0" step="0.1" class="w-16 text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500 py-1 px-2" />
         </div>
+        <div class="flex items-center gap-1.5">
+          <label class="text-xs font-semibold text-gray-600 dark:text-slate-300">Min TTX:</label>
+          <input type="number" v-model.number="minTtx" min="0" step="0.1" class="w-16 text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500 py-1 px-2" />
+        </div>
         <button @click="loadAnalysis" :disabled="loading" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:opacity-50 font-semibold">
           {{ loading ? $t('sidebar.loading') : $t('charts.weibull.refit') }}
         </button>
@@ -419,6 +423,7 @@ const expandedChart = ref(null)
 const isVirtualAgeCollapsed = ref(false)
 const showNoRepairBaseline = ref(false)
 const minTbx = ref(0.0)
+const minTtx = ref(0.0)
 const fittedIntervals = ref([])
 const isIntervalsCollapsed = ref(true)
 const excludedIndices = ref([])
@@ -677,28 +682,6 @@ watch(() => sharedState.filters, (newVal) => {
   }
 }, { deep: true, immediate: true })
 
-let isSyncing = false
-const syncFromWorkbench = async (tab) => {
-  if (isSyncing) return
-  isSyncing = true
-  activeTab.value = tab
-  await nextTick()
-  await loadAnalysis()
-  isSyncing = false
-}
-
-watch(() => sharedState.weibull, (newVal) => {
-  if (newVal) {
-    syncFromWorkbench('TTX')
-  }
-})
-
-watch(() => sharedState.kijima, (newVal) => {
-  if (newVal) {
-    syncFromWorkbench('TBX')
-  }
-})
-
 const toggleIndexExclusion = (index) => {
   const idx = excludedIndices.value.indexOf(index)
   if (idx > -1) {
@@ -719,14 +702,39 @@ const loadAnalysis = async () => {
 
     if (activeTab.value === 'TTX') {
       // TTX Mode: Only Weibull fitting
-      const res = await apiService.fitData(undefined, undefined, toFit, toCens, 'TTX', minTbx.value, exclList)
+      const res = await apiService.fitData(undefined, undefined, toFit, toCens, 'TTX', minTbx.value, exclList, minTtx.value)
       weibullResult.value = res.data?.status === 'success' ? res.data : null
       fittedIntervals.value = res.data?.intervals || []
       kijimaResult.value = []
       selectedCurves.value = ['weibull']
     } else {
-      // TBX Mode: Weibull + all Kijima models in parallel
-      const kRes = await apiService.fitKijima(undefined, undefined, toFit, toCens, minTbx.value, exclList)
+      // TBX Mode: Weibull + selected Kijima models
+      // IMPORTANT: only the models the user selected (via the Workbench Kijima
+      // inspector or the checkboxes below) are requested/fitted — never a wider
+      // default set — so configuring "only Kijima I and II" never triggers
+      // computation of the other model variants.
+      const modelIdMap = {
+        'k1_c': 1,
+        'k2_c': 2,
+        'k1_td': 3,
+        'k2_td': 4,
+        'k1_td2': 5,
+        'k2_td2': 6
+      }
+      const requestedModelIds = selectedCurves.value
+        .map(c => modelIdMap[c])
+        .filter(id => id !== undefined)
+
+      const kRes = await apiService.fitKijima(
+        undefined,
+        undefined,
+        toFit,
+        toCens,
+        minTbx.value,
+        exclList,
+        requestedModelIds.length ? requestedModelIds : [1, 2],
+        minTtx.value
+      )
       if (kRes.data?.status === 'success') {
         kijimaResult.value = kRes.data.models || []
         fittedIntervals.value = kRes.data.intervals || []
@@ -738,7 +746,6 @@ const loadAnalysis = async () => {
         weibullResult.value = null
         fittedIntervals.value = []
       }
-      selectedCurves.value = ['weibull', 'k1_c', 'k2_c', 'k1_td', 'k2_td', 'k1_td2', 'k2_td2']
     }
 
     await nextTick()
@@ -1054,6 +1061,55 @@ const calculateConditionalReliability = async () => {
   }
 }
 
+const syncWorkbenchConfig = () => {
+  if (sharedState.filters.equipment) {
+    localFilters.value.equipment = sharedState.filters.equipment
+  } else if (props.availableEquipment && props.availableEquipment.length > 0 && !localFilters.value.equipment) {
+    localFilters.value.equipment = props.availableEquipment[0]
+  }
+
+  if (sharedState.filters.type && sharedState.filters.type.length > 0) {
+    typesToFit.value = [...sharedState.filters.type]
+  } else if (props.availableTypes && typesToFit.value.length === 0) {
+    typesToFit.value = [...props.availableTypes]
+  }
+
+  if (sharedState.filters.censored_types && sharedState.filters.censored_types.length > 0) {
+    censoredTypes.value = [...sharedState.filters.censored_types]
+  }
+
+  const wConfig = sharedState.nodeConfigs['weibull']
+  const kConfig = sharedState.nodeConfigs['kijima']
+
+  if (wConfig && wConfig.min_tbx !== undefined) {
+    minTbx.value = Number(wConfig.min_tbx) || 0.0
+  } else if (kConfig && kConfig.min_tbx !== undefined) {
+    minTbx.value = Number(kConfig.min_tbx) || 0.0
+  }
+
+  if (wConfig && wConfig.min_ttx !== undefined) {
+    minTtx.value = Number(wConfig.min_ttx) || 0.0
+  } else if (kConfig && kConfig.min_ttx !== undefined) {
+    minTtx.value = Number(kConfig.min_ttx) || 0.0
+  }
+
+  if (kConfig && kConfig.model_types && Array.isArray(kConfig.model_types)) {
+    const modelMap = {
+      1: 'k1_c',
+      2: 'k2_c',
+      3: 'k1_td',
+      4: 'k2_td',
+      5: 'k1_td2',
+      6: 'k2_td2'
+    }
+    const mappedCurves = ['weibull']
+    kConfig.model_types.forEach(mt => {
+      if (modelMap[mt]) mappedCurves.push(modelMap[mt])
+    })
+    selectedCurves.value = mappedCurves
+  }
+}
+
 const handleThemeChange = () => {
   renderCharts()
 }
@@ -1062,10 +1118,33 @@ watch(locale, () => {
   renderCharts()
 })
 
-onMounted(() => {
-  if (!sharedState.weibull && !sharedState.kijima) {
-    loadAnalysis()
+// Single source of truth for "the Workbench just executed": sharedState.executedNodes
+// is always the LAST field useWorkbenchGraph.js updates after nodeConfigs/weibull/kijima,
+// so config is guaranteed synced before we decide what to (re)fetch. Reacting to a single
+// event here (instead of separately watching sharedState.weibull/kijima/filters, each
+// re-triggering their own async loadAnalysis()) avoids the previous race condition where a
+// stale, not-yet-synced model selection could momentarily (or, on unlucky timing, permanently)
+// win over the correct one — which is exactly what caused deselected Kijima models to still
+// get computed/displayed.
+const syncFromWorkbenchExecution = async () => {
+  syncWorkbenchConfig()
+  const executed = sharedState.executedNodes || []
+  if (executed.includes('kijima')) {
+    activeTab.value = 'TBX'
+  } else if (executed.includes('weibull')) {
+    activeTab.value = 'TTX'
   }
+  await nextTick()
+  await loadAnalysis()
+}
+
+watch(() => sharedState.executedNodes, () => {
+  syncFromWorkbenchExecution()
+}, { deep: true })
+
+onMounted(() => {
+  syncWorkbenchConfig()
+  loadAnalysis()
   window.addEventListener('theme-changed', handleThemeChange)
 })
 

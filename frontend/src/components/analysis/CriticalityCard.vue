@@ -223,6 +223,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '../../api'
+import { sharedState } from '../../sharedState'
 import ChartCriticality from '../ChartCriticality.vue'
 
 const { t } = useI18n()
@@ -265,5 +266,27 @@ watch(() => metricX.value, () => {
   loadAnalysis()
 })
 
-onMounted(loadAnalysis)
+const applyWorkbenchCriticality = () => {
+  const config = sharedState.nodeConfigs['criticality']
+  if (config?.compare_by) compareBy.value = config.compare_by
+  if (config?.metric_x) metricX.value = config.metric_x
+  if (sharedState.criticality) {
+    criticalityData.value = sharedState.criticality
+    return true
+  }
+  return false
+}
+
+onMounted(() => {
+  if (!applyWorkbenchCriticality()) {
+    loadAnalysis()
+  }
+})
+
+// This component is kept alive by <keep-alive> in Dashboard.vue, so it won't
+// remount when the user re-runs the Workbench from a different tab — react to
+// a fresh execution here too, so the Workbench stays the source of truth.
+watch(() => sharedState.criticality, (newVal) => {
+  if (newVal) applyWorkbenchCriticality()
+}, { deep: true })
 </script>

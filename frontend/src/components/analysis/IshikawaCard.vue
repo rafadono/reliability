@@ -7,6 +7,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
           {{ $t('charts.iso_analysis.rca_title') }}
+          <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-slate-700 px-2 py-0.5 rounded-full">Norma: {{ sharedState.rca?.standard || 'IEC 62740' }}</span>
         </h4>
         <p class="text-xs text-gray-500 dark:text-slate-400">{{ $t('charts.iso_analysis.rca_desc') }}</p>
       </div>
@@ -171,6 +172,15 @@ watch(() => sharedState.filters, (newVal) => {
         generateRca()
       }
     }
+  }
+}, { deep: true, immediate: true })
+
+watch(() => sharedState.rca, (newVal) => {
+  if (newVal && !newVal.error) {
+    fiveWhys.value = newVal.five_whys || []
+    ishikawa.value = newVal.ishikawa || { machinery: [], method: [], workforce: [], environment: [] }
+    hasData.value = true
+    selectedEquipment.value = newVal.equipment || selectedEquipment.value
   }
 }, { deep: true, immediate: true })
 </script>

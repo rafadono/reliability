@@ -6,6 +6,14 @@ Tests all API endpoints for data upload, filtering, and analysis.
 
 import pytest
 import io
+import httpx
+
+# Compatibility patch for Starlette TestClient with httpx >= 0.28.0
+_orig_httpx_init = httpx.Client.__init__
+def _patched_httpx_init(self, *args, app=None, **kwargs):
+    return _orig_httpx_init(self, *args, **kwargs)
+httpx.Client.__init__ = _patched_httpx_init
+
 from fastapi.testclient import TestClient
 
 
@@ -19,6 +27,8 @@ def client():
     from app import app
 
     return TestClient(app)
+
+
 
 
 @pytest.fixture

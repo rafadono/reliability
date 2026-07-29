@@ -178,11 +178,28 @@ const tableData = ref([
   { component: 'Motor de Tracción', mode: 'Cortocircuito devanado', effect: 'Parada súbita de equipo y bloqueo', severity: 9, occurrence: 2, detection: 2, rpn: 36, category: 'Bajo', action: 'Pruebas de aislamiento anuales' }
 ])
 
+// Flag para evitar un loop de retroalimentación: cuando este archivo escribe en
+// sharedState.fmecaRecords (ver syncToSharedState), el watcher de abajo se dispararía
+// con los mismos datos que ya tenemos localmente. Se ignora esa pasada usando el flag.
+let isSelfUpdate = false
+
 watch(() => sharedState.fmecaRecords, (newVal) => {
+  if (isSelfUpdate) {
+    isSelfUpdate = false
+    return
+  }
   if (newVal && newVal.length > 0) {
     tableData.value = [...newVal]
   }
 }, { deep: true, immediate: true })
+
+// Escribe los cambios locales de vuelta al store global para que el Workbench
+// (u otro nodo fmeca) pueda recoger las últimas ediciones hechas en esta pestaña.
+const syncToSharedState = () => {
+  isSelfUpdate = true
+  sharedState.fmecaRecords = [...tableData.value]
+  sharedState.nodeConfigs.fmeca = { records: [...tableData.value] }
+}
 
 const newRecord = ref({
   component: '',
@@ -237,7 +254,7 @@ const addFmecaRow = async () => {
     category: result.category,
     action: newRecord.value.action || 'Pendiente definición'
   })
-  
+
   // Limpiar campos
   newRecord.value = {
     component: '',
@@ -248,6 +265,8 @@ const addFmecaRow = async () => {
     detection: 5,
     action: ''
   }
+
+  syncToSharedState()
 }
 
 const recalculateRow = async (idx) => {
@@ -255,10 +274,14 @@ const recalculateRow = async (idx) => {
   const result = await getCategoryAndRpn(row.severity, row.occurrence, row.detection)
   row.rpn = result.rpn
   row.category = result.category
+
+  syncToSharedState()
 }
 
 const removeRow = (idx) => {
   tableData.value.splice(idx, 1)
+
+  syncToSharedState()
 }
 
 const getBadgeStyles = (category) => {

@@ -12,10 +12,12 @@ logger = logging.getLogger(__name__)
 
 @router.get("/filters", tags=["Filters"])
 async def get_filters(
-    equipment: Optional[str] = Query(None), failure_type: Optional[str] = Query(None)
+    plant: Optional[str] = Query(None),
+    equipment: Optional[str] = Query(None),
+    failure_type: Optional[str] = Query(None)
 ) -> FilterOptions:
     """
-    Get available filter options respecting hierarchy.
+    Get available filter options respecting hierarchy: Plant -> Equipment -> Type -> Mode.
     """
     if state.filter_manager is None:
         raise HTTPException(
@@ -24,15 +26,20 @@ async def get_filters(
 
     try:
         temp_fm = FilterManager(state.current_data)
+        if plant:
+            temp_fm.set_plant([plant])
         if equipment:
             temp_fm.set_equipment([equipment])
         if failure_type:
-            temp_fm.set_types([failure_type])
+            types_list = [t.strip() for t in failure_type.split(",") if t.strip()]
+            if types_list:
+                temp_fm.set_types(types_list)
 
         opts = FilterOptions(
-            equipment=temp_fm.get_available_equipment(),
-            types=temp_fm.get_available_types(),
-            failure_modes=temp_fm.get_available_failure_modes(),
+            plants=temp_fm.get_available_plants(),
+            equipment=temp_fm.get_equipment_for_plant(),
+            types=temp_fm.get_types_for_equipment(),
+            failure_modes=temp_fm.get_failure_modes_for_types(),
         )
 
         return opts

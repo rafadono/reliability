@@ -73,12 +73,32 @@ const activeTab = ref('workbench')
 const disabledTabMessage = ref('')
 
 const isTabDisabled = (tabId) => {
-  return false
+  const executed = sharedState.executedNodes || []
+  switch (tabId) {
+    case 'workbench':
+      return false
+    case 'quant':
+      return !['weibull', 'kijima', 'weibull_kijima', 'pareto', 'jackknife', 'criticality', 'event_plot', 'trend'].some(n => executed.includes(n))
+    case 'rcm_fmea':
+      return !['rcm', 'fmeca'].some(n => executed.includes(n))
+    case 'rca_fta':
+      return !['rca', 'fta'].some(n => executed.includes(n))
+    case 'ram':
+      return !['ram', 'ramSimulator', 'ram_sim', 'apm', 'trend'].some(n => executed.includes(n))
+    case 'copilot':
+      return false
+    default:
+      return false
+  }
 }
 
 const onTabClick = (tabId) => {
+  if (isTabDisabled(tabId)) {
+    disabledTabMessage.value = 'Aún no has ejecutado ningún análisis para esta pestaña. Configura y ejecuta el Workbench primero.'
+  } else {
+    disabledTabMessage.value = ''
+  }
   activeTab.value = tabId
-  disabledTabMessage.value = ''
 }
 
 // Iconos inline usando SVG funcionales (h)

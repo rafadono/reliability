@@ -6,3 +6,4 @@ from src.reliability_analysis.core.data_processing import DataProcessor
 current_data: Optional[pd.DataFrame] = None
 filter_manager: Optional[FilterManager] = None
 data_processor: Optional[DataProcessor] = None
+workbench_logs = []

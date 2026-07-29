@@ -10,6 +10,13 @@ from pathlib import Path
 import pytest
 import pandas as pd
 import numpy as np
+import httpx
+
+# Compatibility patch for Starlette TestClient with httpx >= 0.28.0
+_orig_httpx_init = httpx.Client.__init__
+def _patched_httpx_init(self, *args, app=None, **kwargs):
+    return _orig_httpx_init(self, *args, **kwargs)
+httpx.Client.__init__ = _patched_httpx_init
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "backend"))
@@ -83,3 +90,11 @@ def small_data():
             "Censored": [0] * 18 + [1] * 2,
         }
     )
+
+
+@pytest.fixture
+def client():
+    from fastapi.testclient import TestClient
+    from backend.app import app
+    return TestClient(app)
+

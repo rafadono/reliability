@@ -58,6 +58,8 @@ defineProps({
   availableTypes: Array
 })
 
+import { sharedState } from '../../sharedState'
+
 const isCollapsed = ref(false)
 
 const localFilters = ref({ equipment: '', type: '' })
@@ -66,10 +68,26 @@ const drilldownEq = ref(null)
 const drilldownType = ref(null)
 const groupBy = ref('equipment')
 
+const syncFromWorkbench = () => {
+  if (sharedState.filters.equipment) {
+    localFilters.value.equipment = sharedState.filters.equipment
+  }
+  if (sharedState.filters.type && sharedState.filters.type.length > 0) {
+    localFilters.value.type = sharedState.filters.type[0]
+  }
+  const pConfig = sharedState.nodeConfigs['pareto']
+  if (pConfig && pConfig.group_by) {
+    groupBy.value = pConfig.group_by.toLowerCase()
+  }
+}
+
 const loadAnalysis = async () => {
   try {
+    if (sharedState.pareto && !drilldownEq.value && !drilldownType.value) {
+      paretoData.value = sharedState.pareto
+      return
+    }
     await apiService.setFilters(localFilters.value.equipment, localFilters.value.type)
-    
     const eq = drilldownEq.value || undefined
     const type = drilldownType.value || undefined
     const res = await apiService.getParetoAnalysis(groupBy.value, eq, type)
@@ -101,11 +119,20 @@ const resetToEquipment = () => {
   groupBy.value = 'equipment'
   loadAnalysis()
 }
+
 const resetToType = () => {
   drilldownType.value = null
   groupBy.value = 'type'
   loadAnalysis()
 }
 
-onMounted(loadAnalysis)
+watch(() => sharedState.executedNodes, () => {
+  syncFromWorkbench()
+  loadAnalysis()
+}, { deep: true })
+
+onMounted(() => {
+  syncFromWorkbench()
+  loadAnalysis()
+})
 </script>

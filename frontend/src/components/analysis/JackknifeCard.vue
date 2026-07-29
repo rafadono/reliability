@@ -199,10 +199,10 @@
             </tbody>
           </table>
       </div>
-      </div>
-    </div>
     </div>
   </div>
+</div>
+</div>
 </template>
 
 <script setup>
@@ -210,6 +210,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { apiService } from '../../api'
 import ChartJackknife from '../ChartJackknife.vue'
+import { sharedState } from '../../sharedState'
 
 const { t } = useI18n()
 
@@ -226,12 +227,26 @@ const scaleX = ref('linear')
 const scaleY = ref('linear')
 const showExplanation = ref(false)
 
+const syncFromWorkbench = () => {
+  if (sharedState.filters.equipment) {
+    localFilters.value.equipment = sharedState.filters.equipment
+  }
+  const jConfig = sharedState.nodeConfigs['jackknife']
+  if (jConfig && jConfig.compare_by) {
+    compareBy.value = jConfig.compare_by.toLowerCase()
+  }
+}
+
 const classifiedRegions = computed(() => {
   return jackknifeData.value?.regions || null
 })
 
 const loadAnalysis = async () => {
   try {
+    if (sharedState.jackknife && !localFilters.value.equipment) {
+      jackknifeData.value = sharedState.jackknife
+      return
+    }
     await apiService.setFilters(localFilters.value.equipment)
     const res = await apiService.getJackknifeAnalysis(undefined, undefined, compareBy.value, null)
     jackknifeData.value = res.data
@@ -246,5 +261,13 @@ watch(() => localFilters.value.equipment, (newEq) => {
   loadAnalysis()
 })
 
-onMounted(loadAnalysis)
+watch(() => sharedState.executedNodes, () => {
+  syncFromWorkbench()
+  loadAnalysis()
+}, { deep: true })
+
+onMounted(() => {
+  syncFromWorkbench()
+  loadAnalysis()
+})
 </script>

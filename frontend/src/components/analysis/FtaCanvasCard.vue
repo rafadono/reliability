@@ -6,8 +6,12 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
         {{ $t('charts.iso_analysis.fta_title') }}
+        <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-slate-700 px-2 py-0.5 rounded-full">Norma: IEC 61025</span>
       </h4>
       <p class="text-xs text-gray-500 dark:text-slate-400">{{ $t('charts.iso_analysis.fta_desc') }}</p>
+      <p v-if="sharedState.fta && !sharedState.fta.error" class="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">
+        Último cálculo del Workbench: {{ (sharedState.fta.top_event_probability * 100).toFixed(2) }}%
+      </p>
     </div>
 
     <!-- Controles de Probabilidad General -->
@@ -61,8 +65,8 @@
             <div class="w-0.5 h-4 bg-gray-300 dark:bg-slate-600 mb-1"></div>
 
             <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-3 shadow-sm w-full text-center relative hover:shadow-md transition-shadow">
-              <span class="block text-[10px] font-bold text-gray-800 dark:text-slate-200 truncate" :title="$t('charts.iso_analysis.' + event.key)">
-                {{ $t('charts.iso_analysis.' + event.key) }}
+              <span class="block text-[10px] font-bold text-gray-800 dark:text-slate-200 truncate" :title="event.name || $t('charts.iso_analysis.' + event.key)">
+                {{ event.name || $t('charts.iso_analysis.' + event.key) }}
               </span>
               
               <!-- Slider de Probabilidad -->
@@ -91,15 +95,38 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { sharedState } from '../../sharedState'
 
-const gateType = ref('OR') // AND o OR
+const defaultBasicEvents = () => [
+  { key: 'fta_event_bearing', name: null, prob: 0.12, probPercent: 12 },
+  { key: 'fta_event_seal', name: null, prob: 0.08, probPercent: 8 },
+  { key: 'fta_event_motor', name: null, prob: 0.05, probPercent: 5 }
+]
 
-const basicEvents = ref([
-  { key: 'fta_event_bearing', prob: 0.12, probPercent: 12 },
-  { key: 'fta_event_seal', prob: 0.08, probPercent: 8 },
-  { key: 'fta_event_motor', prob: 0.05, probPercent: 5 }
-])
+const basicEventsFromConfig = (events) => events.map(e => {
+  const prob = typeof e.probability === 'number' ? e.probability : 0
+  return {
+    key: null,
+    name: e.name || '',
+    prob,
+    probPercent: Math.round(prob * 100)
+  }
+})
+
+const ftaNodeConfig = sharedState.nodeConfigs && sharedState.nodeConfigs['fta']
+
+const gateType = ref(
+  (ftaNodeConfig && (ftaNodeConfig.gate_type === 'AND' || ftaNodeConfig.gate_type === 'OR'))
+    ? ftaNodeConfig.gate_type
+    : 'OR'
+) // AND o OR
+
+const basicEvents = ref(
+  (ftaNodeConfig && Array.isArray(ftaNodeConfig.basic_events) && ftaNodeConfig.basic_events.length > 0)
+    ? basicEventsFromConfig(ftaNodeConfig.basic_events)
+    : defaultBasicEvents()
+)
 
 const calculatedTopProbability = computed(() => {
   const probs = basicEvents.value.map(e => e.prob)
@@ -121,6 +148,18 @@ const updateEventProb = (idx) => {
   const ev = basicEvents.value[idx]
   ev.prob = ev.probPercent / 100
 }
+
+// This component is kept alive by <keep-alive> in Dashboard.vue, so a later
+// Workbench re-execution (with a different gate/basic-events configuration)
+// needs a live watcher, not just the one-time setup-time seed above.
+watch(() => sharedState.nodeConfigs && sharedState.nodeConfigs['fta'], (config) => {
+  if (config && (config.gate_type === 'AND' || config.gate_type === 'OR')) {
+    gateType.value = config.gate_type
+  }
+  if (config && Array.isArray(config.basic_events) && config.basic_events.length > 0) {
+    basicEvents.value = basicEventsFromConfig(config.basic_events)
+  }
+}, { deep: true })
 </script>
 
 <style scoped>

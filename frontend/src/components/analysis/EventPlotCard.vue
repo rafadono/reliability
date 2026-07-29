@@ -161,6 +161,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { apiService } from '../../api'
+import { sharedState } from '../../sharedState'
 import ChartEventPlot from '../ChartEventPlot.vue'
 
 const props = defineProps({
@@ -218,22 +219,28 @@ watch(() => props.availableEquipment, (newVal) => {
   }
 }, { immediate: true })
 
+// Applies an events payload (either from the API or from a Workbench
+// execution's sharedState.event_plot) to the card's local state.
+const applyEventPlotData = (data) => {
+  eventPlotData.value = data.events || null
+
+  minAvailableDate.value = data.min_date || ''
+  maxAvailableDate.value = data.max_date || ''
+
+  if (!localFilters.value.dateFrom || (minAvailableDate.value && localFilters.value.dateFrom < minAvailableDate.value)) {
+    localFilters.value.dateFrom = minAvailableDate.value
+  }
+  if (!localFilters.value.dateTo || (maxAvailableDate.value && localFilters.value.dateTo > maxAvailableDate.value)) {
+    localFilters.value.dateTo = maxAvailableDate.value
+  }
+}
+
 const loadAnalysis = async () => {
   try {
     // Clear global equipment filter to fetch all event history
     await apiService.setFilters('')
     const res = await apiService.getEventPlot()
-    eventPlotData.value = res.data.events
-    
-    minAvailableDate.value = res.data.min_date || ''
-    maxAvailableDate.value = res.data.max_date || ''
-    
-    if (!localFilters.value.dateFrom || (minAvailableDate.value && localFilters.value.dateFrom < minAvailableDate.value)) {
-      localFilters.value.dateFrom = minAvailableDate.value
-    }
-    if (!localFilters.value.dateTo || (maxAvailableDate.value && localFilters.value.dateTo > maxAvailableDate.value)) {
-      localFilters.value.dateTo = maxAvailableDate.value
-    }
+    applyEventPlotData(res.data)
   } catch (err) { console.error('Error loading Event Plot:', err) }
 }
 
@@ -244,11 +251,20 @@ const handleClickOutside = (event) => {
 }
 
 onMounted(() => {
-  loadAnalysis()
+  if (sharedState.event_plot) {
+    applyEventPlotData(sharedState.event_plot)
+  } else {
+    loadAnalysis()
+  }
   document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
+
+// Kept alive by <keep-alive> in Dashboard.vue — react to later Workbench runs too.
+watch(() => sharedState.event_plot, (newVal) => {
+  if (newVal) applyEventPlotData(newVal)
+}, { deep: true })
 </script>

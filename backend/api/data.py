@@ -17,11 +17,36 @@ logger = logging.getLogger(__name__)
 @router.post("/upload", response_model=UploadResponse, tags=["Data"])
 async def upload_file(file: UploadFile = File(...)) -> UploadResponse:
     """
-    Upload CSV file with reliability data.
+    Upload CSV file with reliability data supporting multiple encodings and separators.
     """
     try:
         contents = await file.read()
-        df = pd.read_csv(io.StringIO(contents.decode("utf-8")), sep=";")
+        
+        # Multi-encoding decode fallback
+        contents_str = None
+        for enc in ["utf-8-sig", "utf-8", "latin1", "cp1252"]:
+            try:
+                contents_str = contents.decode(enc)
+                break
+            except (UnicodeDecodeError, AttributeError):
+                continue
+                
+        if contents_str is None:
+            contents_str = contents.decode("utf-8", errors="replace")
+
+        # Multi-separator fallback logic
+        df = None
+        for sep in [";", ",", "\t"]:
+            try:
+                temp_df = pd.read_csv(io.StringIO(contents_str), sep=sep)
+                if len(temp_df.columns) > 1:
+                    df = temp_df
+                    break
+            except Exception:
+                continue
+                
+        if df is None:
+            df = pd.read_csv(io.StringIO(contents_str), sep=None, engine="python")
 
         state.data_processor = DataProcessor()
         state.current_data = state.data_processor.treat_data(df)
@@ -53,11 +78,16 @@ async def get_available_filters() -> Dict[str, List[str]]:
         }
 
     try:
+        eq_list = [str(x) for x in state.current_data["Equipment"].dropna().unique().tolist()] if "Equipment" in state.current_data.columns else []
+        type_list = [str(x) for x in state.current_data["Type"].dropna().unique().tolist()] if "Type" in state.current_data.columns else []
+        mdf_list = [str(x) for x in state.current_data["mdf"].dropna().unique().tolist()] if "mdf" in state.current_data.columns else []
+
         return {
-            "equipment": sorted(state.current_data["Equipment"].unique().tolist()),
-            "types": sorted(state.current_data["Type"].unique().tolist()),
-            "failure_modes": sorted(state.current_data["mdf"].unique().tolist()),
+            "equipment": sorted(eq_list),
+            "types": sorted(type_list),
+            "failure_modes": sorted(mdf_list),
         }
     except Exception as e:
         logger.error(f"Get available filters error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+

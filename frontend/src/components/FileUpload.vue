@@ -65,9 +65,16 @@ const isLoading = ref(false)
 const error = ref('')
 const fileInput = ref(null)
 
+const isCsvFile = (file) => {
+  if (!file) return false
+  const name = file.name ? file.name.toLowerCase() : ''
+  const type = file.type ? file.type.toLowerCase() : ''
+  return name.endsWith('.csv') || type === 'text/csv' || type.includes('csv') || type === 'application/vnd.ms-excel' || type === ''
+}
+
 const handleFileSelect = (event) => {
   const file = event.target.files[0]
-  if (file && file.type === 'text/csv') {
+  if (isCsvFile(file)) {
     selectedFile.value = file
     error.value = ''
     uploadFile()
@@ -81,7 +88,7 @@ const handleDrop = (event) => {
   isDragging.value = false
   
   const file = event.dataTransfer.files[0]
-  if (file && file.type === 'text/csv') {
+  if (isCsvFile(file)) {
     selectedFile.value = file
     error.value = ''
     uploadFile()

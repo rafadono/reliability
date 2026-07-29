@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
-from typing import Dict, Any
+from fastapi import APIRouter, HTTPException, Response
+from typing import Dict, Any, List
+
 import pandas as pd
 import numpy as np
 import logging
@@ -174,6 +175,103 @@ async def jackknife_plot_analysis(req: AnalysisRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def compute_criticality(data: pd.DataFrame, compare_by: str, metric_x: str = "count") -> Dict[str, Any]:
+    """
+    Shared Criticality Matrix computation (frequency/probability vs average downtime),
+    used both by the /analysis/criticality-plot endpoint and the Workbench 'criticality' node,
+    so that a configuration made in either place is computed identically.
+    """
+    if data.empty:
+        raise ValueError("Filtered data is empty")
+
+    if compare_by == "equipment":
+        group_col = "Equipment"
+    elif compare_by == "type":
+        group_col = "Type"
+    elif compare_by == "mode":
+        group_col = "mdf"
+    else:
+        group_col = "Equipment"
+
+    if group_col not in data.columns:
+        group_col = "Equipment"
+
+    stats = (
+        data.groupby(group_col)
+        .agg(
+            failures=(group_col, "count"),
+            total_downtime=("TTX", "sum"),
+            avg_downtime=("TTX", "mean"),
+        )
+        .reset_index()
+    )
+
+    total_failures = float(stats["failures"].sum())
+
+    avg_failures = float(stats["failures"].mean()) if not stats.empty else 0
+    avg_prob = (avg_failures / total_failures) if total_failures > 0 else 0
+    avg_total = float(stats["total_downtime"].mean()) if not stats.empty else 0
+    avg_mean = float(stats["avg_downtime"].mean()) if not stats.empty else 0
+
+    scatter_data = []
+    for _, row in stats.iterrows():
+        item_failures = float(row["failures"])
+        item_downtime = float(row["total_downtime"])
+        item_avg_downtime = float(row["avg_downtime"])
+        item_prob = item_failures / total_failures if total_failures > 0 else 0.0
+
+        scatter_data.append({
+            "name": str(row[group_col]),
+            "x": item_failures,
+            "x_prob": item_prob,
+            "y_total": item_downtime,
+            "y_avg": item_avg_downtime,
+        })
+
+    # Calculate regions on backend (all business/analytical calculations here)
+    metric_x = metric_x or "count"
+    if metric_x == "probability":
+        avg_x = avg_prob * 100.0
+    else:
+        avg_x = avg_failures
+    avg_y = avg_mean
+
+    regions = {
+        "highRisk": [],
+        "highConsequence": [],
+        "highFrequency": [],
+        "lowRisk": []
+    }
+
+    for item in scatter_data:
+        x_val = item["x_prob"] * 100.0 if metric_x == "probability" else item["x"]
+        y_val = item["y_avg"]
+
+        item_with_val = {**item, "x_val": x_val}
+
+        if x_val > avg_x and y_val > avg_y:
+            regions["highRisk"].append(item_with_val)
+        elif x_val <= avg_x and y_val > avg_y:
+            regions["highConsequence"].append(item_with_val)
+        elif x_val > avg_x and y_val <= avg_y:
+            regions["highFrequency"].append(item_with_val)
+        else:
+            regions["lowRisk"].append(item_with_val)
+
+    return {
+        "scatter_data": scatter_data,
+        "averages": {
+            "failures": avg_failures,
+            "probability": avg_prob,
+            "total_downtime": avg_total,
+            "avg_downtime": avg_mean,
+        },
+        "regions": regions,
+        "compare_by": compare_by,
+        "metric_x": metric_x,
+    }
+
+
 @router.post("/analysis/criticality-plot", tags=["Analysis"])
 async def criticality_plot_analysis(req: CriticalityRequest) -> Dict[str, Any]:
     """
@@ -188,94 +286,10 @@ async def criticality_plot_analysis(req: CriticalityRequest) -> Dict[str, Any]:
         if req.types_to_use:
             data = data[data["Type"].isin(req.types_to_use)]
 
-        if data.empty:
-            raise HTTPException(status_code=400, detail="Filtered data is empty")
-
-        if req.compare_by == "equipment":
-            group_col = "Equipment"
-        elif req.compare_by == "type":
-            group_col = "Type"
-        elif req.compare_by == "mode":
-            group_col = "mdf"
-        else:
-            group_col = "Equipment"
-
-        if group_col not in data.columns:
-            group_col = "Equipment"
-
-        stats = (
-            data.groupby(group_col)
-            .agg(
-                failures=(group_col, "count"),
-                total_downtime=("TTX", "sum"),
-                avg_downtime=("TTX", "mean"),
-            )
-            .reset_index()
-        )
-
-        total_failures = float(stats["failures"].sum())
-
-        avg_failures = float(stats["failures"].mean()) if not stats.empty else 0
-        avg_prob = (avg_failures / total_failures) if total_failures > 0 else 0
-        avg_total = float(stats["total_downtime"].mean()) if not stats.empty else 0
-        avg_mean = float(stats["avg_downtime"].mean()) if not stats.empty else 0
-
-        scatter_data = []
-        for _, row in stats.iterrows():
-            item_failures = float(row["failures"])
-            item_downtime = float(row["total_downtime"])
-            item_avg_downtime = float(row["avg_downtime"])
-            item_prob = item_failures / total_failures if total_failures > 0 else 0.0
-
-            scatter_data.append({
-                "name": str(row[group_col]),
-                "x": item_failures,
-                "x_prob": item_prob,
-                "y_total": item_downtime,
-                "y_avg": item_avg_downtime,
-            })
-
-        # Calculate regions on backend (all business/analytical calculations here)
-        metric_x = req.metric_x or "count"
-        if metric_x == "probability":
-            avg_x = avg_prob * 100.0
-        else:
-            avg_x = avg_failures
-        avg_y = avg_mean
-
-        regions = {
-            "highRisk": [],
-            "highConsequence": [],
-            "highFrequency": [],
-            "lowRisk": []
-        }
-
-        for item in scatter_data:
-            x_val = item["x_prob"] * 100.0 if metric_x == "probability" else item["x"]
-            y_val = item["y_avg"]
-
-            item_with_val = {**item, "x_val": x_val}
-
-            if x_val > avg_x and y_val > avg_y:
-                regions["highRisk"].append(item_with_val)
-            elif x_val <= avg_x and y_val > avg_y:
-                regions["highConsequence"].append(item_with_val)
-            elif x_val > avg_x and y_val <= avg_y:
-                regions["highFrequency"].append(item_with_val)
-            else:
-                regions["lowRisk"].append(item_with_val)
-
-        return {
-            "status": "success",
-            "scatter_data": scatter_data,
-            "averages": {
-                "failures": avg_failures,
-                "probability": avg_prob,
-                "total_downtime": avg_total,
-                "avg_downtime": avg_mean,
-            },
-            "regions": regions,
-        }
+        result = compute_criticality(data, req.compare_by, req.metric_x)
+        return {"status": "success", **result}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         logger.error(f"Criticality plot analysis error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -321,7 +335,11 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
             fit_data["TBX"] = fit_data[target_col]
 
         min_tbx = float(req.min_tbx) if req.min_tbx is not None else 0.0
+        min_ttx = float(getattr(req, "min_ttx", 0.0) or 0.0)
         excluded_idxs = req.excluded_indices or []
+
+        if min_ttx > 0 and "TTX" in fit_data.columns:
+            fit_data = fit_data[fit_data["TTX"] >= min_ttx].copy()
 
         # Build the intervals list for output
         intervals_df = fit_data[fit_data["TBX"] >= 0.0].copy()
@@ -418,10 +436,63 @@ async def fit_data(req: WeibullFitRequest) -> Dict[str, Any]:
             "failures_count": results.get("failures_count"),
             "censored_count": results.get("censored_count"),
             "intervals": intervals_list,
+            "applied_config": {
+                "min_tbx": min_tbx,
+                "min_ttx": min_ttx,
+                "target_column": req.target_column or "TBX",
+                "excluded_indices": excluded_idxs,
+            },
         }
     except Exception as e:
         logger.error(f"Fit analysis error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+def compute_bad_actors(data: pd.DataFrame, compare_by: str = "equipment") -> List[Dict[str, Any]]:
+    """
+    Shared 'Bad Actors' (APM) ranking computation, used both by /analysis/bad-actors
+    and the Workbench 'apm' node, so a configuration made in either place matches.
+    """
+    if data.empty:
+        return []
+
+    group_col = "Equipment" if compare_by == "equipment" else "Type"
+    if group_col not in data.columns:
+        group_col = "Equipment" if "Equipment" in data.columns else data.columns[0]
+
+    uptime_col = (
+        "TBX"
+        if "TBX" in data.columns
+        else ("Days" if "Days" in data.columns else None)
+    )
+    downtime_col = "TTX" if "TTX" in data.columns else None
+
+    stats = []
+    for name, group in data.groupby(group_col):
+        failures = len(group)
+        downtime = float(group[downtime_col].sum()) if downtime_col else 0.0
+        uptime = float(group[uptime_col].sum()) if uptime_col else 0.0
+
+        mttr = downtime / failures if failures > 0 else 0.0
+        failures_mtbf = int((group[uptime_col] > 0).sum()) if uptime_col else failures
+        mtbf = uptime / failures_mtbf if failures_mtbf > 0 else 0.0
+        availability = (
+            (uptime / (uptime + downtime)) * 100 if (uptime + downtime) > 0 else 0.0
+        )
+
+        stats.append(
+            {
+                "name": str(name),
+                "failures": failures,
+                "downtime": downtime,
+                "mttr": mttr,
+                "mtbf": mtbf,
+                "availability": availability,
+            }
+        )
+
+    stats.sort(key=lambda x: x["downtime"], reverse=True)
+    return stats[:50]
 
 
 @router.post("/analysis/bad-actors", tags=["Analysis"])
@@ -436,41 +507,7 @@ async def bad_actors_analysis(req: AnalysisRequest) -> Dict[str, Any]:
         if data.empty:
             return {"status": "warning", "bad_actors": []}
 
-        group_col = "Equipment" if req.compare_by == "equipment" else "Type"
-
-        uptime_col = (
-            "TBX"
-            if "TBX" in data.columns
-            else ("Days" if "Days" in data.columns else None)
-        )
-        downtime_col = "TTX" if "TTX" in data.columns else None
-
-        stats = []
-        for name, group in data.groupby(group_col):
-            failures = len(group)
-            downtime = float(group[downtime_col].sum()) if downtime_col else 0.0
-            uptime = float(group[uptime_col].sum()) if uptime_col else 0.0
-
-            mttr = downtime / failures if failures > 0 else 0.0
-            failures_mtbf = int((group[uptime_col] > 0).sum()) if uptime_col else failures
-            mtbf = uptime / failures_mtbf if failures_mtbf > 0 else 0.0
-            availability = (
-                (uptime / (uptime + downtime)) * 100 if (uptime + downtime) > 0 else 0.0
-            )
-
-            stats.append(
-                {
-                    "name": str(name),
-                    "failures": failures,
-                    "downtime": downtime,
-                    "mttr": mttr,
-                    "mtbf": mtbf,
-                    "availability": availability,
-                }
-            )
-
-        stats.sort(key=lambda x: x["downtime"], reverse=True)
-        return {"status": "success", "bad_actors": stats[:50]}
+        return {"status": "success", "bad_actors": compute_bad_actors(data, req.compare_by)}
     except Exception as e:
         logger.error(f"Bad actors error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -515,6 +552,58 @@ async def reliability_growth(req: AnalysisRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def compute_event_plot(data: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Shared per-equipment failure-event timeline computation, used both by
+    /analysis/event-plot and the Workbench 'event_plot' node.
+    """
+    if "Start_Date" not in data.columns:
+        raise ValueError("Dataset must contain 'Start_Date' column.")
+
+    if data.empty:
+        return {"events": {}, "min_date": None, "max_date": None}
+
+    data = data.copy()
+    data["Start_Date"] = pd.to_datetime(data["Start_Date"])
+    min_val = data["Start_Date"].min()
+    min_date = min_val.strftime("%Y-%m-%d") if pd.notnull(min_val) else None
+
+    if "End_Date" in data.columns:
+        data["End_Date"] = pd.to_datetime(data["End_Date"])
+        max_val = data["End_Date"].max()
+        max_date = max_val.strftime("%Y-%m-%d") if pd.notnull(max_val) else None
+    else:
+        data["End_Date"] = data["Start_Date"]
+        max_val = data["Start_Date"].max()
+        max_date = max_val.strftime("%Y-%m-%d") if pd.notnull(max_val) else None
+
+    event_data = {}
+    for name, group in data.groupby("Equipment"):
+        event_list = []
+        for _, row in group.iterrows():
+            if pd.notnull(row["Start_Date"]):
+                start_str = row["Start_Date"].strftime("%Y-%m-%dT%H:%M:%S")
+                end_val = (
+                    row["End_Date"]
+                    if pd.notnull(row["End_Date"])
+                    else row["Start_Date"]
+                )
+                end_str = end_val.strftime("%Y-%m-%dT%H:%M:%S")
+                mode_val = str(row["mdf"]) if "mdf" in row else "Unknown"
+                type_val = str(row["Type"]) if "Type" in row else "Unknown"
+                event_list.append(
+                    {
+                        "start": start_str,
+                        "end": end_str,
+                        "mode": mode_val,
+                        "type": type_val,
+                    }
+                )
+        event_data[str(name)] = event_list
+
+    return {"events": event_data, "min_date": min_date, "max_date": max_date}
+
+
 @router.post("/analysis/event-plot", tags=["Analysis"])
 async def event_plot(req: AnalysisRequest) -> Dict[str, Any]:
     if state.filter_manager is None:
@@ -522,62 +611,10 @@ async def event_plot(req: AnalysisRequest) -> Dict[str, Any]:
 
     try:
         data = state.filter_manager.get_filtered_data()
-        if "Start_Date" not in data.columns:
-            raise HTTPException(
-                status_code=400, detail="Dataset must contain 'Start_Date' column."
-            )
-
-        if data.empty:
-            return {
-                "status": "success",
-                "events": {},
-                "min_date": None,
-                "max_date": None,
-            }
-
-        data["Start_Date"] = pd.to_datetime(data["Start_Date"])
-        min_val = data["Start_Date"].min()
-        min_date = min_val.strftime("%Y-%m-%d") if pd.notnull(min_val) else None
-
-        if "End_Date" in data.columns:
-            data["End_Date"] = pd.to_datetime(data["End_Date"])
-            max_val = data["End_Date"].max()
-            max_date = max_val.strftime("%Y-%m-%d") if pd.notnull(max_val) else None
-        else:
-            data["End_Date"] = data["Start_Date"]
-            max_val = data["Start_Date"].max()
-            max_date = max_val.strftime("%Y-%m-%d") if pd.notnull(max_val) else None
-
-        event_data = {}
-        for name, group in data.groupby("Equipment"):
-            event_list = []
-            for _, row in group.iterrows():
-                if pd.notnull(row["Start_Date"]):
-                    start_str = row["Start_Date"].strftime("%Y-%m-%dT%H:%M:%S")
-                    end_val = (
-                        row["End_Date"]
-                        if pd.notnull(row["End_Date"])
-                        else row["Start_Date"]
-                    )
-                    end_str = end_val.strftime("%Y-%m-%dT%H:%M:%S")
-                    mode_val = str(row["mdf"]) if "mdf" in row else "Unknown"
-                    type_val = str(row["Type"]) if "Type" in row else "Unknown"
-                    event_list.append(
-                        {
-                            "start": start_str,
-                            "end": end_str,
-                            "mode": mode_val,
-                            "type": type_val,
-                        }
-                    )
-            event_data[str(name)] = event_list
-
-        return {
-            "status": "success",
-            "events": event_data,
-            "min_date": min_date,
-            "max_date": max_date,
-        }
+        result = compute_event_plot(data)
+        return {"status": "success", **result}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         logger.error(f"Event plot error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -1408,13 +1445,17 @@ async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
 
         censored_types = req.censored_failure_types or []
         min_tbx = float(req.min_tbx) if req.min_tbx is not None else 0.0
+        min_ttx = float(getattr(req, "min_ttx", 0.0) or 0.0)
         excluded_idxs = req.excluded_indices or []
+
+        if min_ttx > 0 and "TTX" in fit_data.columns:
+            fit_data = fit_data[fit_data["TTX"] >= min_ttx].copy()
 
         # Build the intervals list for output
         intervals_df = fit_data[fit_data["TBX"] >= 0.0].copy()
         if "Start_Date" in intervals_df.columns:
             intervals_df = intervals_df.sort_values("Start_Date")
-        
+
         intervals_list = []
         active_idx = 1
         indices_to_drop = []
@@ -1451,12 +1492,14 @@ async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
         fit_data_for_fit = fit_data.drop(index=indices_to_drop)
         fit_data_for_fit = fit_data_for_fit[(fit_data_for_fit["TBX"] >= min_tbx) & (fit_data_for_fit["TBX"] > 0)].copy()
 
+        models_to_fit = req.models if req.models and isinstance(req.models, list) and len(req.models) > 0 else [1, 2, 3, 4, 5, 6]
+
         fitter = KijimaFitter()
         results = fitter.fit(
             dataframe=fit_data_for_fit,
             column="TBX",
             censored_types=censored_types,
-            models=[1, 2, 3, 4, 5, 6],
+            models=models_to_fit,
         )
 
         if isinstance(results, dict):
@@ -1528,6 +1571,12 @@ async def kijima_fit(req: KijimaFitRequest) -> Dict[str, Any]:
             "models": serialized_results,
             "sample_size": len(fit_data_for_fit),
             "intervals": intervals_list,
+            "applied_config": {
+                "min_tbx": min_tbx,
+                "min_ttx": min_ttx,
+                "models": models_to_fit,
+                "excluded_indices": excluded_idxs,
+            },
         }
     except Exception as e:
         logger.error(f"Kijima fit analysis error: {str(e)}\n{traceback.format_exc()}")
@@ -1584,6 +1633,88 @@ async def fmea_calculate_rpn(req: FmecaRpnRequest) -> Dict[str, Any]:
     }
 
 
+def compute_ram_simulation(
+    df: pd.DataFrame,
+    full_data: pd.DataFrame,
+    preventive_efficiency: float,
+    logistics_delay: float,
+) -> Dict[str, Any]:
+    """
+    Shared Availability / Production Assurance simulation (ISO 20815), used both by
+    /analysis/ram/simulate and the Workbench 'ram' node. `df` is the (equipment-filtered)
+    data the simulation runs on; `full_data` is used only to rank plant-wide bad actors.
+    """
+    if df.empty:
+        raise ValueError("No data available for the selected equipment")
+
+    # Total failures and total downtime
+    num_failures = int(df["Type"].isin(["CORRECTIVO", "MI"]).sum()) if "Type" in df.columns else 0
+    if num_failures == 0:
+        num_failures = int(len(df))
+
+    actual_downtime = float(df["TTX"].sum()) if "TTX" in df.columns else float(num_failures * 2.0)
+
+    # Total simulation horizon (e.g. 1 year of operation: 8760 hours)
+    horizon = 8760.0
+
+    # Calculate simulated downtime adjusting for efficiency and logistics delay
+    # More logistics delay increases downtime; higher preventive efficiency reduces failures/downtime
+    logistics_factor = logistics_delay * num_failures
+    preventive_reduction = 1.0 - (preventive_efficiency * 0.4)
+
+    simulated_downtime = (actual_downtime + logistics_factor) * preventive_reduction
+    simulated_downtime = min(horizon - 100.0, max(1.0, simulated_downtime))
+
+    simulated_uptime = horizon - simulated_downtime
+    availability = (simulated_uptime / horizon) * 100.0
+    production_assurance = availability * 0.985  # Subtract minor processing losses
+
+    # Generate monthly timeline data for availability chart
+    monthly_availability = []
+    months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+
+    # Add random fluctuations around the average availability
+    np.random.seed(42)
+    noise = np.random.normal(0, 1.5, 12)
+    for i, month in enumerate(months):
+        val = min(100.0, max(50.0, availability + noise[i]))
+        monthly_availability.append({"month": month, "availability": round(val, 2)})
+
+    # Vectorized downtime contributors (Bad Actors) using pandas groupby
+    if full_data is not None and "Equipment" in full_data.columns:
+        has_ttx = "TTX" in full_data.columns
+        bad_df = full_data.groupby("Equipment").agg(
+            downtime=("TTX", "sum") if has_ttx else ("Equipment", "count"),
+            failures=("Equipment", "count")
+        ).reset_index().sort_values(by="downtime", ascending=False).head(5)
+
+        bad_actors_contrib = [
+            {
+                "equipment": str(row["Equipment"]),
+                "downtime": round(float(row["downtime"]), 1),
+                "failures": int(row["failures"])
+            }
+            for _, row in bad_df.iterrows()
+        ]
+    else:
+        bad_actors_contrib = []
+
+    return {
+        "availability": round(availability, 2),
+        "production_assurance": round(production_assurance, 2),
+        "uptime_hours": round(simulated_uptime, 1),
+        "downtime_hours": round(simulated_downtime, 1),
+        "failures_count": num_failures,
+        "bad_actors": bad_actors_contrib,
+        "timeline": monthly_availability,
+        "standard": "ISO 20815",
+        "applied_config": {
+            "preventive_efficiency": preventive_efficiency,
+            "logistics_delay": logistics_delay,
+        },
+    }
+
+
 @router.post("/analysis/ram/simulate", tags=["ISO Analysis"])
 async def ram_simulate(req: RamSimulateRequest) -> Dict[str, Any]:
     """Runs a plant Availability and Production Assurance simulation based on ISO 20815."""
@@ -1591,72 +1722,81 @@ async def ram_simulate(req: RamSimulateRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail="No data loaded")
 
     try:
-        # Base data filtering
         df = state.current_data.copy()
         if req.equipment:
             df = df[df["Equipment"] == req.equipment]
-            
-        if df.empty:
-            raise ValueError("No data available for the selected equipment")
 
-        # Total failures and total downtime
-        num_failures = int(df["Type"].isin(["CORRECTIVO", "MI"]).sum())
-        if num_failures == 0:
-            num_failures = int(len(df))
-            
-        actual_downtime = float(df["TTX"].sum()) if "TTX" in df.columns else float(num_failures * 2.0)
-        
-        # Total simulation horizon (e.g. 1 year of operation: 8760 hours)
-        horizon = 8760.0
-        
-        # Calculate simulated downtime adjusting for efficiency and logistics delay
-        # More logistics delay increases downtime; higher preventive efficiency reduces failures/downtime
-        logistics_factor = req.logistics_delay * num_failures
-        preventive_reduction = 1.0 - (req.preventive_efficiency * 0.4)
-        
-        simulated_downtime = (actual_downtime + logistics_factor) * preventive_reduction
-        simulated_downtime = min(horizon - 100.0, max(1.0, simulated_downtime))
-        
-        simulated_uptime = horizon - simulated_downtime
-        availability = (simulated_uptime / horizon) * 100.0
-        production_assurance = availability * 0.985 # Subtract minor processing losses
-        
-        # Generate monthly timeline data for availability chart
-        monthly_availability = []
-        months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-        
-        # Add random fluctuations around the average availability
-        np.random.seed(42)
-        noise = np.random.normal(0, 1.5, 12)
-        for i, month in enumerate(months):
-            val = min(100.0, max(50.0, availability + noise[i]))
-            monthly_availability.append({"month": month, "availability": round(val, 2)})
-
-        # Downtime contributors (Bad Actors)
-        equipments = state.current_data["Equipment"].unique()
-        bad_actors_contrib = []
-        for eq in equipments:
-            eq_df = state.current_data[state.current_data["Equipment"] == eq]
-            eq_downtime = eq_df["TTX"].sum() if "TTX" in eq_df.columns else len(eq_df) * 2.0
-            bad_actors_contrib.append({
-                "equipment": eq,
-                "downtime": round(float(eq_downtime), 1),
-                "failures": int(len(eq_df))
-            })
-        bad_actors_contrib = sorted(bad_actors_contrib, key=lambda x: x["downtime"], reverse=True)[:5]
-
-        return {
-            "status": "success",
-            "availability": round(availability, 2),
-            "production_assurance": round(production_assurance, 2),
-            "uptime_hours": round(simulated_uptime, 1),
-            "downtime_hours": round(simulated_downtime, 1),
-            "bad_actors": bad_actors_contrib,
-            "timeline": monthly_availability
-        }
+        result = compute_ram_simulation(
+            df, state.current_data, req.preventive_efficiency, req.logistics_delay
+        )
+        return {"status": "success", **result}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         logger.error(f"RAM simulation error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/analysis/export/fmeca", tags=["ISO Analysis"])
+async def export_fmeca_report(records: List[Dict[str, Any]]) -> Response:
+    """Exports FMECA records (IEC 60812) to a CSV formatted download."""
+    import csv
+    import io
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(["Componente", "Modo de Falla", "Efecto", "Severidad (S)", "Ocurrencia (O)", "Deteccion (D)", "RPN", "Categoria", "Accion Recomendada"])
+    for r in records:
+        writer.writerow([
+            r.get("component", ""),
+            r.get("mode", ""),
+            r.get("effect", ""),
+            r.get("severity", 5),
+            r.get("occurrence", 5),
+            r.get("detection", 5),
+            r.get("rpn", 125),
+            r.get("category", "Medio"),
+            r.get("action", "")
+        ])
+    output.seek(0)
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=fmeca_report_iec60812.csv"}
+    )
+
+
+@router.post("/analysis/export/rcm", tags=["ISO Analysis"])
+async def export_rcm_report(req: RcmSuggestRequest) -> Response:
+    """Exports RCM analysis (SAE JA1011) to a structured CSV download."""
+    import csv
+    import io
+    if state.filter_manager is None or state.current_data is None:
+        raise HTTPException(status_code=400, detail="No data loaded")
+    
+    df = state.current_data[state.current_data["Equipment"] == req.equipment].copy()
+    comments = df["Comment"].dropna().astype(str).tolist() if "Comment" in df.columns else []
+    rcm_sheets = LlmService.get_rcm_suggestions(req.equipment, comments)
+    
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(["Equipo", "Funcion Principal", "Falla Funcional", "Modo de Falla", "Efecto", "Tarea Preventiva", "Intervalo"])
+    for sheet in rcm_sheets:
+        writer.writerow([
+            req.equipment,
+            sheet.get("function", ""),
+            sheet.get("functional_failure", ""),
+            sheet.get("failure_mode", ""),
+            sheet.get("failure_effect", ""),
+            sheet.get("task", ""),
+            sheet.get("interval", "")
+        ])
+    output.seek(0)
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=rcm_report_{req.equipment}.csv"}
+    )
+
 
 
 @router.post("/analysis/rca/suggest", tags=["ISO Analysis"])
