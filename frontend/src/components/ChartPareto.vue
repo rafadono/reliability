@@ -1,5 +1,13 @@
 <template>
   <div class="w-full">
+    <div class="flex justify-end gap-2 mb-1">
+      <button @click="handleResetZoom" type="button" class="text-[10px] px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+        {{ $t('charts.common.reset_zoom') }}
+      </button>
+      <button @click="handleExport" type="button" class="text-[10px] px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+        {{ $t('charts.common.export_png') }}
+      </button>
+    </div>
     <canvas ref="chartContainer" class="max-h-96"></canvas>
     <div v-if="data.analysis" class="mt-4 grid grid-cols-2 gap-4">
       <div class="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-100/10">
@@ -18,8 +26,10 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Chart as ChartJS, registerables } from 'chart.js'
+import zoomPlugin from 'chartjs-plugin-zoom'
+import { downloadChartImage } from '../utils/chartExport'
 
-ChartJS.register(...registerables)
+ChartJS.register(...registerables, zoomPlugin)
 
 const { t, locale } = useI18n()
 
@@ -31,6 +41,14 @@ const emit = defineEmits(['bar-click'])
 
 const chartContainer = ref(null)
 let chartInstance = null
+
+const handleResetZoom = () => {
+  if (chartInstance) chartInstance.resetZoom()
+}
+
+const handleExport = () => {
+  downloadChartImage(chartInstance, 'pareto-chart.png')
+}
 
 const createChart = () => {
   if (!props.data?.pareto) return
@@ -91,6 +109,14 @@ const createChart = () => {
           display: true,
           text: `${t('charts.pareto.title')} (${props.data.group_by})`,
           color: textColor
+        },
+        zoom: {
+          pan: { enabled: true, mode: 'xy' },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'xy'
+          }
         }
       },
       onClick: (event, elements, chart) => {

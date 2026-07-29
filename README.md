@@ -17,7 +17,7 @@ Modern reliability engineering analysis platform built with Vue 3 and FastAPI.
   * **RCA (IEC 62740)**: Automated 5 Whys and Ishikawa (Fishbone) diagrams.
   * **FTA (IEC 61025)**: Graphical Fault Tree logic gate builder.
   * **RAM Assurance (ISO 20815)**: Plant availability simulator modeling logistics delays and maintenance efficiency.
-* **AI Copilot**: Vendor-agnostic LLM assistant (Gemini, OpenAI, Ollama, Mock) for RCM recommendations, comment mining, and interactive troubleshooting.
+* **AI Copilot**: Vendor-agnostic LLM assistant (Gemini, OpenAI, Ollama, Mock) for RCM recommendations, comment mining, and an interactive chat grounded in the currently loaded dataset (record counts, active filters).
 
 ---
 
@@ -101,6 +101,9 @@ Pump B;Hydraulic;Seal;120;1;01/02/2026;Operational decision failure
 * **Censored** (or `Censurado`): Status (`0` for failure, `1` for operational/censored stop).
 * **Date** (or `Fecha`): Start date (`dd/mm/yyyy`).
 * **Comment** (or `Comentario`): Short text used for NLP mining.
+* **Plant** (or `Planta`, `Site`): Optional plant/site identifier, used by the Plant-level filter cascade.
+
+On upload, the platform reports a small data-quality summary (rows dropped for an unparseable date, duplicate rows removed) and the cleaned dataset can be downloaded back out at any time via `GET /api/data/export`.
 
 ---
 

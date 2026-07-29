@@ -78,7 +78,8 @@
           {{ $t('charts.iso_analysis.ishikawa_title') }}
         </h5>
 
-        <div class="ishikawa-container relative py-4 overflow-x-auto min-w-[700px]">
+        <div class="overflow-x-auto">
+        <div class="ishikawa-container relative py-4 min-w-[700px]">
           <!-- Eje central -->
           <div class="absolute left-6 right-32 top-1/2 h-1 bg-emerald-600 dark:bg-emerald-500 -translate-y-1/2"></div>
           <!-- Cabeza de pescado (Efecto) -->
@@ -118,6 +119,7 @@
               </ul>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

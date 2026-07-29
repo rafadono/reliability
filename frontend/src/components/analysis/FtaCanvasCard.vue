@@ -28,8 +28,9 @@
     </div>
 
     <!-- Lienzo del Árbol de Fallas -->
-    <div class="flex flex-col items-center py-6 border border-gray-100 dark:border-slate-700 rounded-xl bg-gray-50/30 dark:bg-slate-900/30 overflow-x-auto min-w-[700px]">
-      
+    <div class="overflow-x-auto">
+    <div class="flex flex-col items-center py-6 border border-gray-100 dark:border-slate-700 rounded-xl bg-gray-50/30 dark:bg-slate-900/30 min-w-[700px]">
+
       <!-- TOP EVENT -->
       <div class="flex flex-col items-center">
         <div class="bg-red-600 text-white font-extrabold text-xs px-5 py-3 rounded-lg shadow-md border-2 border-red-500 text-center w-52 relative">
@@ -90,6 +91,7 @@
         </div>
       </div>
 
+    </div>
     </div>
   </div>
 </template>

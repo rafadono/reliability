@@ -8,9 +8,12 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Chart as ChartJS, registerables } from 'chart.js'
 
 ChartJS.register(...registerables)
+
+const { t } = useI18n()
 
 const props = defineProps({
   data: Object, // Expects { "Global": [...], "Asset A": [...] }
@@ -18,8 +21,28 @@ const props = defineProps({
   kpiLabel: String
 })
 
+const emit = defineEmits(['point-click'])
+
 const chartContainer = ref(null)
 let chartInstance = null
+
+// Basic Shewhart-style control-chart stats (mean, +-2 sigma) computed from the
+// primary series (Global if present, otherwise the first series available).
+const computeControlStats = (values) => {
+  const n = values.length
+  if (n === 0) return null
+  const mean = values.reduce((a, b) => a + b, 0) / n
+  const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n
+  return { mean, std: Math.sqrt(variance) }
+}
+
+const computeMovingAverage = (values, window = 3) => {
+  return values.map((_, i) => {
+    const start = Math.max(0, i - window + 1)
+    const slice = values.slice(start, i + 1)
+    return slice.reduce((a, b) => a + b, 0) / slice.length
+  })
+}
 
 const palette = [
   '#3b82f6', // blue
@@ -108,6 +131,50 @@ const createChart = () => {
     })
   })
 
+  // Control-chart overlay: moving average + +-2 sigma control limits, computed
+  // from the primary series (Global when available). Kept visually secondary
+  // (thin/dashed, no points) so it doesn't compete with the real data series.
+  const primaryKey = keys.includes('Global') ? 'Global' : firstKey
+  const primaryValues = props.data[primaryKey].map(item => item[props.selectedKpi] || 0)
+  const stats = computeControlStats(primaryValues)
+  if (stats && primaryValues.length > 1) {
+    const movingAvg = computeMovingAverage(primaryValues, 3)
+    const ucl = primaryValues.map(() => stats.mean + 2 * stats.std)
+    const lcl = primaryValues.map(() => Math.max(0, stats.mean - 2 * stats.std))
+
+    datasets.push({
+      label: t('charts.kpi.moving_avg'),
+      data: movingAvg,
+      borderColor: '#94a3b8',
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderDash: [4, 3],
+      pointRadius: 0,
+      fill: false,
+      tension: 0.2
+    })
+    datasets.push({
+      label: t('charts.kpi.ucl'),
+      data: ucl,
+      borderColor: 'rgba(239, 68, 68, 0.55)',
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderDash: [2, 2],
+      pointRadius: 0,
+      fill: false
+    })
+    datasets.push({
+      label: t('charts.kpi.lcl'),
+      data: lcl,
+      borderColor: 'rgba(239, 68, 68, 0.55)',
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderDash: [2, 2],
+      pointRadius: 0,
+      fill: false
+    })
+  }
+
   chartInstance = new ChartJS(ctx, {
     type: 'line',
     data: {
@@ -127,15 +194,37 @@ const createChart = () => {
           intersect: false
         }
       },
+      onClick: (event, elements, chart) => {
+        if (elements.length > 0) {
+          const el = elements[0]
+          const dataset = chart.data.datasets[el.datasetIndex]
+          emit('point-click', {
+            series: dataset.label,
+            month: chart.data.labels[el.index],
+            value: dataset.data[el.index],
+            kpi: props.selectedKpi
+          })
+        }
+      },
       scales: {
         x: {
           ticks: { color: textColor },
-          grid: { color: gridColor }
+          grid: { color: gridColor },
+          title: {
+            display: true,
+            text: t('charts.kpi.month'),
+            color: textColor
+          }
         },
         y: {
           ticks: { color: textColor },
           grid: { color: gridColor },
-          beginAtZero: true
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: props.kpiLabel,
+            color: textColor
+          }
         }
       }
     }

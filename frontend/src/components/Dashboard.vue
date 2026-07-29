@@ -54,6 +54,7 @@
 
 <script setup>
 import { ref, computed, onMounted, h, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { apiService } from '../api'
 import { sharedState } from '../sharedState'
 
@@ -94,7 +95,7 @@ const isTabDisabled = (tabId) => {
 
 const onTabClick = (tabId) => {
   if (isTabDisabled(tabId)) {
-    disabledTabMessage.value = 'Aún no has ejecutado ningún análisis para esta pestaña. Configura y ejecuta el Workbench primero.'
+    disabledTabMessage.value = t('dashboard.tab_disabled_message')
   } else {
     disabledTabMessage.value = ''
   }
@@ -121,17 +122,19 @@ const ChatIcon = () => h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'curre
   h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' })
 ])
 
-const tabs = [
-  { id: 'workbench', name: 'Workbench de Confiabilidad', icon: TemplateIcon, component: WorkbenchTab },
-  { id: 'quant', name: 'Analisis Cuantitativo', icon: ChartBarIcon, component: QuantReliabilityTab },
-  { id: 'rcm_fmea', name: 'RCM & FMECA', icon: AdjustmentsIcon, component: RcmFmecaTab },
-  { id: 'rca_fta', name: 'RCA & FTA', icon: SearchIcon, component: RcaFtaTab },
-  { id: 'ram', name: 'Aseguramiento RAM (ISO)', icon: LightningBoltIcon, component: RamAssuranceTab },
-  { id: 'copilot', name: 'Copiloto IA', icon: ChatIcon, component: AiCopilotTab }
-]
+const { t } = useI18n()
+
+const tabs = computed(() => [
+  { id: 'workbench', name: t('dashboard.tabs.workbench'), icon: TemplateIcon, component: WorkbenchTab },
+  { id: 'quant', name: t('dashboard.tabs.quant'), icon: ChartBarIcon, component: QuantReliabilityTab },
+  { id: 'rcm_fmea', name: t('dashboard.tabs.rcm_fmea'), icon: AdjustmentsIcon, component: RcmFmecaTab },
+  { id: 'rca_fta', name: t('dashboard.tabs.rca_fta'), icon: SearchIcon, component: RcaFtaTab },
+  { id: 'ram', name: t('dashboard.tabs.ram'), icon: LightningBoltIcon, component: RamAssuranceTab },
+  { id: 'copilot', name: t('dashboard.tabs.copilot'), icon: ChatIcon, component: AiCopilotTab }
+])
 
 const activeComponent = computed(() => {
-  const current = tabs.find(t => t.id === activeTab.value)
+  const current = tabs.value.find(tab => tab.id === activeTab.value)
   return current ? current.component : QuantReliabilityTab
 })
 
@@ -140,12 +143,18 @@ const props = defineProps({
   activeTabProp: String
 })
 
-const emit = defineEmits(['upload-file', 'reset'])
+const emit = defineEmits(['upload-file', 'reset', 'tab-changed'])
 
 watch(() => props.activeTabProp, (newVal) => {
   if (newVal) {
     activeTab.value = newVal
   }
+}, { immediate: true })
+
+// Keeps App.vue's URL-based deep link (?tab=) in sync whenever the tab changes
+// from inside Dashboard itself (clicking a tab button), not just via the prop.
+watch(activeTab, (newVal) => {
+  emit('tab-changed', newVal)
 })
 
 const changeTabAndScroll = async (tabId, cardId) => {

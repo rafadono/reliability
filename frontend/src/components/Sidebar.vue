@@ -4,35 +4,35 @@
 
 
       <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-4 rounded-xl shadow-md space-y-4">
-        <h3 class="font-bold text-xs uppercase tracking-wider border-b border-white/20 pb-2">Secciones de Análisis</h3>
-        
+        <h3 class="font-bold text-xs uppercase tracking-wider border-b border-white/20 pb-2">{{ $t('sidebar.analysis_sections') }}</h3>
+
         <!-- Pestaña 1: Análisis Cuantitativo -->
         <div class="space-y-1">
-          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">1. Cuantitativo</div>
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">{{ $t('sidebar.section_quant') }}</div>
           <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
             <li>
               <button @click="selectTabAndScroll('quant', 'pareto-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Análisis de Pareto
+                {{ $t('sidebar.pareto') }}
               </button>
             </li>
             <li>
               <button @click="selectTabAndScroll('quant', 'jackknife-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Diagrama Jackknife
+                {{ $t('sidebar.jackknife') }}
               </button>
             </li>
             <li>
               <button @click="selectTabAndScroll('quant', 'criticality-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Matriz de Criticidad
+                {{ $t('sidebar.criticality') }}
               </button>
             </li>
             <li>
               <button @click="selectTabAndScroll('quant', 'weibull-kijima-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Weibull & Kijima
+                {{ $t('sidebar.link_weibull_kijima') }}
               </button>
             </li>
             <li>
               <button @click="selectTabAndScroll('quant', 'event-plot-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Línea de Eventos
+                {{ $t('sidebar.link_event_plot') }}
               </button>
             </li>
           </ul>
@@ -40,16 +40,16 @@
 
         <!-- Pestaña 2: RCM & FMECA -->
         <div class="space-y-1">
-          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">2. RCM & FMECA</div>
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">{{ $t('sidebar.section_rcm_fmeca') }}</div>
           <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
             <li>
               <button @click="selectTabAndScroll('rcm_fmea', 'rcm-wizard-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Asistente RCM (JA1011)
+                {{ $t('sidebar.link_rcm_wizard') }}
               </button>
             </li>
             <li>
               <button @click="selectTabAndScroll('rcm_fmea', 'fmeca-table-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Matriz FMECA (IEC 60812)
+                {{ $t('sidebar.link_fmeca_matrix') }}
               </button>
             </li>
           </ul>
@@ -57,16 +57,16 @@
 
         <!-- Pestaña 3: RCA & FTA -->
         <div class="space-y-1">
-          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">3. RCA & FTA</div>
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">{{ $t('sidebar.section_rca_fta') }}</div>
           <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
             <li>
               <button @click="selectTabAndScroll('rca_fta', 'ishikawa-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Causa Raíz RCA (IEC 62740)
+                {{ $t('sidebar.link_rca') }}
               </button>
             </li>
             <li>
               <button @click="selectTabAndScroll('rca_fta', 'fta-canvas-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Árbol de Fallas FTA (IEC 61025)
+                {{ $t('sidebar.link_fta') }}
               </button>
             </li>
           </ul>
@@ -74,21 +74,21 @@
 
         <!-- Pestaña 4: Aseguramiento RAM -->
         <div class="space-y-1">
-          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">4. Aseguramiento RAM</div>
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">{{ $t('sidebar.section_ram') }}</div>
           <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
             <li>
               <button @click="selectTabAndScroll('ram', 'ram-simulator-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Simulador RAM
+                {{ $t('sidebar.link_ram_sim') }}
               </button>
             </li>
             <li>
               <button @click="selectTabAndScroll('ram', 'apm-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Bad Actors APM
+                {{ $t('sidebar.link_apm') }}
               </button>
             </li>
             <li>
               <button @click="selectTabAndScroll('ram', 'trend-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Tendencia de KPIs
+                {{ $t('sidebar.link_kpi_trend') }}
               </button>
             </li>
           </ul>
@@ -96,16 +96,16 @@
 
         <!-- Pestaña 5: Copiloto IA -->
         <div class="space-y-1">
-          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">5. Copiloto IA</div>
+          <div class="text-[10px] font-extrabold uppercase text-blue-200 tracking-wider">{{ $t('sidebar.section_copilot') }}</div>
           <ul class="space-y-0.5 text-xs pl-2 border-l border-white/10">
             <li>
               <button @click="selectTabAndScroll('copilot', 'ai-chat-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Chat Copiloto IA
+                {{ $t('sidebar.link_ai_chat') }}
               </button>
             </li>
             <li>
               <button @click="selectTabAndScroll('copilot', 'ai-card')" class="w-full text-left py-1 px-1.5 rounded hover:bg-white/15 transition-colors focus:outline-none">
-                Minería de Texto NLP
+                {{ $t('sidebar.link_nlp_mining') }}
               </button>
             </li>
           </ul>
@@ -113,7 +113,7 @@
       </div>
 
       <div>
-        <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Navigation</h3>
+        <h3 class="font-semibold text-gray-900 dark:text-white mb-3">{{ $t('sidebar.navigation') }}</h3>
         <nav class="space-y-2">
           <a href="#" @click.prevent="$emit('export-pdf')" class="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -121,8 +121,8 @@
             </svg>
             {{ $t('sidebar.export_pdf') }}
           </a>
-          <a href="#" @click.prevent="$emit('notify', 'Settings module coming soon')" class="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
-            Settings
+          <a href="#" @click.prevent="$emit('notify', t('sidebar.settings_coming_soon'))" class="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">
+            {{ $t('sidebar.settings') }}
           </a>
         </nav>
       </div>

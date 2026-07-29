@@ -17,15 +17,23 @@ class LlmService:
     """Unified service adapter to handle multi-vendor LLM providers."""
 
     @classmethod
-    def _call_api(cls, prompt: str, system_instruction: str = "") -> str:
-        """Internal helper to make HTTP requests to the configured provider."""
+    def _call_api(cls, prompt: str, system_instruction: str = "", expect_json: bool = True, history: List[Dict[str, str]] = None) -> str:
+        """Internal helper to make HTTP requests to the configured provider.
+
+        `expect_json` controls whether the provider is asked to force JSON output
+        (used by the structured RCM/RCA suggestion callers). Conversational callers
+        (e.g. the Copilot chat) should pass `expect_json=False` to get plain text back.
+        `history` is an optional list of prior turns ({"role": "user"|"assistant", "content": "..."})
+        that is threaded into the conversation for providers that support multi-turn messages.
+        """
         provider = config.LLM_PROVIDER
         model = config.LLM_MODEL
+        history = history or []
 
         if provider == "openai":
             if not config.OPENAI_API_KEY:
                 raise ValueError("OPENAI_API_KEY is not configured")
-            
+
             headers = {
                 "Authorization": f"Bearer {config.OPENAI_API_KEY}",
                 "Content-Type": "application/json"
@@ -33,13 +41,19 @@ class LlmService:
             messages = []
             if system_instruction:
                 messages.append({"role": "system", "content": system_instruction})
+            for turn in history:
+                role = turn.get("role") if isinstance(turn, dict) else None
+                content = turn.get("content") if isinstance(turn, dict) else None
+                if role in ("user", "assistant") and content:
+                    messages.append({"role": role, "content": content})
             messages.append({"role": "user", "content": prompt})
 
             payload = {
                 "model": model or "gpt-4o",
                 "messages": messages,
-                "response_format": {"type": "json_object"}
             }
+            if expect_json:
+                payload["response_format"] = {"type": "json_object"}
             try:
                 res = requests.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers, timeout=30)
                 res.raise_for_status()
@@ -54,18 +68,31 @@ class LlmService:
             
             target_model = model or "gemini-1.5-flash"
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:generateContent?key={config.GEMINI_API_KEY}"
-            
+
             headers = {"Content-Type": "application/json"}
-            
-            full_prompt = f"{system_instruction}\n\n{prompt}" if system_instruction else prompt
+
+            history_str = ""
+            if history:
+                turns = []
+                for turn in history:
+                    role = turn.get("role") if isinstance(turn, dict) else None
+                    content = turn.get("content") if isinstance(turn, dict) else None
+                    if role in ("user", "assistant") and content:
+                        label = "Usuario" if role == "user" else "Asistente"
+                        turns.append(f"{label}: {content}")
+                if turns:
+                    history_str = "\n".join(turns) + "\n\n"
+
+            full_prompt = f"{system_instruction}\n\n{history_str}{prompt}" if system_instruction else f"{history_str}{prompt}"
             payload = {
                 "contents": [{
                     "parts": [{"text": full_prompt}]
                 }],
-                "generationConfig": {
+            }
+            if expect_json:
+                payload["generationConfig"] = {
                     "responseMimeType": "application/json"
                 }
-            }
             try:
                 res = requests.post(url, json=payload, headers=headers, timeout=30)
                 res.raise_for_status()
@@ -83,14 +110,20 @@ class LlmService:
             messages = []
             if system_instruction:
                 messages.append({"role": "system", "content": system_instruction})
+            for turn in history:
+                role = turn.get("role") if isinstance(turn, dict) else None
+                content = turn.get("content") if isinstance(turn, dict) else None
+                if role in ("user", "assistant") and content:
+                    messages.append({"role": role, "content": content})
             messages.append({"role": "user", "content": prompt})
 
             payload = {
                 "model": model or "llama3",
                 "messages": messages,
                 "stream": False,
-                "format": "json"
             }
+            if expect_json:
+                payload["format"] = "json"
             try:
                 res = requests.post(url, json=payload, timeout=45)
                 res.raise_for_status()
@@ -171,6 +204,85 @@ class LlmService:
         except Exception as e:
             logger.warn(f"LLM RCA suggestion failed: {str(e)}. Falling back to mock heuristics.")
             return cls._get_mock_rca(equipment, technical_comments)
+
+    @classmethod
+    def get_copilot_response(cls, message: str, history: List[Dict[str, str]], context_summary: str) -> str:
+        """
+        Generates a conversational response for the Reliability Copilot chat widget.
+        Uses LLM if configured; otherwise falls back to a deterministic keyword-based heuristic.
+        """
+        provider = config.LLM_PROVIDER
+        if provider == "mock" or not provider:
+            return cls._get_mock_copilot_response(message, context_summary)
+
+        system_instruction = (
+            "Eres el Agente Coordinador de Confiabilidad (Reliability Copilot), un asistente experto en "
+            "ingeniería de confiabilidad y mantenimiento industrial, especializado en las normas SAE JA1011/JA1012 "
+            "(RCM), IEC 60812 (FMECA), IEC 62740 (RCA) e ISO 20815 (RAM / Aseguramiento de Producción). "
+            "Respondes de forma clara, técnica y concisa, en el mismo idioma en que te escribe el usuario. "
+            "Tienes acceso a un resumen del contexto de los datos actualmente cargados en la aplicación."
+        )
+        if context_summary:
+            system_instruction += f"\n\nContexto de datos actuales:\n{context_summary}"
+
+        try:
+            response_text = cls._call_api(
+                message,
+                system_instruction,
+                expect_json=False,
+                history=history or [],
+            )
+            return response_text.strip()
+        except Exception as e:
+            logger.warning(f"LLM Copilot chat failed: {str(e)}. Falling back to mock heuristics.")
+            return cls._get_mock_copilot_response(message, context_summary)
+
+    @classmethod
+    def _get_mock_copilot_response(cls, message: str, context_summary: str) -> str:
+        """Deterministic keyword-based mock fallback for the Copilot chat."""
+        text_lower = (message or "").lower()
+
+        if any(k in text_lower for k in ["rcm", "ja1011", "ja1012"]):
+            response = (
+                "El estándar SAE JA1011 establece los 7 criterios secuenciales mínimos para que un proceso sea "
+                "denominado RCM: 1) Funciones, 2) Fallas funcionales, 3) Modos de falla, 4) Efectos de falla, "
+                "5) Consecuencias, 6) Tareas proactivas y 7) Acciones alternativas. "
+                "Le recomiendo utilizar el Asistente RCM interactivo para modelar automáticamente estos campos "
+                "en base a su base de datos."
+            )
+        elif any(k in text_lower for k in ["rpn", "fmeca", "60812", "risk", "riesgo"]):
+            response = (
+                "De acuerdo con la norma IEC 60812, el Número de Prioridad de Riesgo (RPN) se calcula como "
+                "RPN = Severidad (S) x Ocurrencia (O) x Detección (D), cada una valorada de 1 a 10. "
+                "La criticidad se clasifica en: Bajo (<50), Medio (50-149), Alto (150-299) y Crítico (>=300). "
+                "Use la Matriz FMECA interactiva para ponderar sus equipos."
+            )
+        elif any(k in text_lower for k in ["iso 20815", "ram", "disponibilidad", "availability"]):
+            response = (
+                "La norma ISO 20815 define el marco para el Aseguramiento de Producción en base al análisis RAM: "
+                "Confiabilidad (probabilidad de operar sin fallas), Disponibilidad (Uptime / (Uptime + Downtime)) "
+                "y Mantenibilidad (MTTR). El simulador RAM modela el comportamiento del sistema ajustando retrasos "
+                "logísticos y la eficiencia de los preventivos."
+            )
+        elif any(k in text_lower for k in ["rodamiento", "bearing", "falla", "failure", "vibra"]):
+            response = (
+                "Para fallas recurrentes de rodamientos (picadura de pistas, desalineación), la estrategia "
+                "sugerida es: 1) Ejecutar un Análisis de Causa Raíz (RCA - IEC 62740) con Ishikawa y 5 Porqués, "
+                "2) Integrar un preventivo RCM de análisis espectral de vibraciones quincenal y termografía, "
+                "3) Si el RPN (FMECA) excede 150, evaluar engrasadores automatizados regulados por volumen."
+            )
+        else:
+            response = (
+                "He analizado su consulta. Como Agente Coordinador de Confiabilidad, le sugiero: si necesita "
+                "evaluar causas físicas inmediatas, realice un RCA / 5 Porqués; si busca implementar mantenimiento "
+                "predictivo o preventivo sistemático, use la matriz FMECA combinada con RCM. Especifique el equipo "
+                "o la norma (SAE, IEC, ISO) que desea profundizar para orientarlo mejor."
+            )
+
+        if context_summary:
+            response = f"Basándome en tus datos actuales ({context_summary}): {response}"
+
+        return response
 
     @classmethod
     def _get_mock_rcm(cls, equipment: str, technical_comments: List[str]) -> List[Dict[str, Any]]:

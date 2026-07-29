@@ -15,33 +15,38 @@
           </svg>
         </div>
         <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 rounded-full shrink-0">
-          No configurado
+          {{ $t('workbench.not_configured') }}
         </span>
       </div>
 
       <div>
         <h4 class="text-xs font-bold text-gray-800 dark:text-slate-200 line-clamp-1">
-          {{ title || defaultTitles[nodeType] || 'Módulo de Análisis' }}
+          {{ title || defaultTitles[nodeType] || $t('workbench.default_module') }}
         </h4>
         <p class="text-[11px] text-gray-500 dark:text-slate-400 line-clamp-2 mt-1 leading-snug">
-          Agregue y ejecute este bloque en el Workbench para activarlo.
+          {{ $t('workbench.locked_card_desc') }}
         </p>
       </div>
     </div>
 
-    <button 
+    <button
       @click="$emit('navigate', 'workbench')"
       class="mt-3 w-full py-1.5 px-3 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 rounded-lg text-[11px] font-semibold transition-all active:scale-95 flex items-center justify-center gap-1.5"
     >
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
       </svg>
-      Configurar en Workbench
+      {{ $t('workbench.go_to_workbench') }}
     </button>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
   active: {
     type: Boolean,
@@ -59,16 +64,16 @@ defineProps({
 
 defineEmits(['navigate'])
 
-const defaultTitles = {
-  pareto: 'Análisis de Pareto (80/20)',
-  jackknife: 'Diagrama Jackknife (Criticidad RCM)',
-  criticality: 'Matriz de Criticidad 3D',
-  weibull_kijima: 'Ajuste Weibull & Reparación Kijima',
-  event_plot: 'Línea de Eventos y TBF',
-  ram_sim: 'Simulador RAM Monte Carlo',
-  apm: 'APM Bad Actors y Crecimiento',
-  trend: 'Tendencia de KPIs y Confiabilidad',
-  rcm_fmeca: 'Análisis RCM & FMECA (JA1011 / IEC 60812)',
-  rca_fta: 'Causa Raíz RCA y Árbol de Fallas FTA'
-}
+const defaultTitles = computed(() => ({
+  pareto: t('workbench.default_titles.pareto'),
+  jackknife: t('workbench.default_titles.jackknife'),
+  criticality: t('workbench.default_titles.criticality'),
+  weibull_kijima: t('workbench.default_titles.weibull_kijima'),
+  event_plot: t('workbench.default_titles.event_plot'),
+  ram_sim: t('workbench.default_titles.ram_sim'),
+  apm: t('workbench.default_titles.apm'),
+  trend: t('workbench.default_titles.trend'),
+  rcm_fmeca: t('workbench.default_titles.rcm_fmeca'),
+  rca_fta: t('workbench.default_titles.rca_fta')
+}))
 </script>

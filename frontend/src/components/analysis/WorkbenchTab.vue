@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[720px] min-h-[600px] flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-md">
+  <div class="h-[70vh] min-h-[400px] flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-md">
     <!-- Barra de Herramientas Superior -->
     <WorkbenchToolbar 
       :loading="loading" 
@@ -32,11 +32,13 @@
       @on-canvas-pan="onCanvasPan" 
       @stop-canvas-pan="stopCanvasPan" 
       @handle-wheel="handleWheel" 
-      @start-connection="startConnection" 
-      @update-connection-cursor="updateConnectionCursor" 
-      @complete-connection="completeConnection" 
-      @end-connection="endConnection" 
-      @navigate="$emit('navigate', $event)" 
+      @start-connection="startConnection"
+      @update-connection-cursor="updateConnectionCursor"
+      @complete-connection="completeConnection"
+      @end-connection="endConnection"
+      @navigate="$emit('navigate', $event)"
+      @delete-node="deleteBlock"
+      @nudge-node="({ id, dx, dy }) => nudgeNode(id, dx, dy)"
     />
 
     <!-- Consola de Logs & Diagnósticos en la parte inferior -->
@@ -90,6 +92,7 @@ const {
   selectNode,
   addBlock,
   deleteBlock,
+  nudgeNode,
   startConnection,
   updateConnectionCursor,
   completeConnection,

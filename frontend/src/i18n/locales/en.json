@@ -9,12 +9,19 @@
     "processing": "Uploading...",
     "file": "File:",
     "err_invalid": "Please select a valid CSV file",
-    "err_failed": "Upload failed. Please try again."
+    "err_failed": "Upload failed. Please try again.",
+    "err_invalid_extension": "The selected file does not have a .csv extension",
+    "confirm": "Confirm Upload",
+    "cancel": "Cancel",
+    "quality_report": "{invalidDates} rows with invalid dates were discarded, {duplicates} duplicates removed",
+    "quality_report_dates_only": "{invalidDates} rows with invalid dates were discarded",
+    "quality_report_duplicates_only": "{duplicates} duplicates removed"
   },
   "sidebar": {
     "quick_actions": "Quick Actions",
     "upload_new": "Upload New Data",
     "reset_filters": "Reset Filters",
+    "export_data": "Export Data (CSV)",
     "export_pdf": "Export to PDF",
     "analysis_types": "Analysis Types",
     "pareto": "Pareto Analysis",
@@ -32,11 +39,40 @@
     "all_equip": "All Equipment",
     "all_types": "All Types",
     "apply": "Apply Filters",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "analysis_sections": "Analysis Sections",
+    "section_quant": "1. Quantitative",
+    "section_rcm_fmeca": "2. RCM & FMECA",
+    "section_rca_fta": "3. RCA & FTA",
+    "section_ram": "4. RAM Assurance",
+    "section_copilot": "5. AI Copilot",
+    "link_weibull_kijima": "Weibull & Kijima",
+    "link_event_plot": "Event Timeline",
+    "link_rcm_wizard": "RCM Wizard (JA1011)",
+    "link_fmeca_matrix": "FMECA Matrix (IEC 60812)",
+    "link_rca": "RCA Root Cause (IEC 62740)",
+    "link_fta": "FTA Fault Tree (IEC 61025)",
+    "link_ram_sim": "RAM Simulator",
+    "link_apm": "Bad Actors APM",
+    "link_kpi_trend": "KPI Trend",
+    "link_ai_chat": "AI Copilot Chat",
+    "link_nlp_mining": "NLP Text Mining",
+    "navigation": "Navigation",
+    "settings": "Settings",
+    "settings_coming_soon": "Settings module coming soon"
   },
   "dashboard": {
     "title": "Analysis Dashboard",
     "desc": "Independent analysis modules. Customize filters to explore reliability patterns.",
+    "tab_disabled_message": "You haven't run any analysis for this tab yet. Configure and run the Workbench first.",
+    "tabs": {
+      "workbench": "Reliability Workbench",
+      "quant": "Quantitative Analysis",
+      "rcm_fmea": "RCM & FMECA",
+      "rca_fta": "RCA & FTA",
+      "ram": "RAM Assurance (ISO)",
+      "copilot": "AI Copilot"
+    },
     "stats": {
       "records": "Total Records",
       "mtbf": "MTBF (Global)",
@@ -82,7 +118,8 @@
       "hrs_total": "hrs Downtime (Total)",
       "x_axis": "Number of Failures (Frequency)",
       "y_axis_avg": "Average Downtime (MTTR)",
-      "y_axis_total": "Total Downtime"
+      "y_axis_total": "Total Downtime",
+      "acute_chronic_badge": "Acute & Chronic Zone"
     },
     "criticality": {
       "title": "Criticality Matrix",
@@ -107,7 +144,8 @@
       "mttr": "MTTR (h)",
       "nodes": "Nodes",
       "hrs_failure": "hrs/failure (MTTR)",
-      "prob_failure": "Probability of Failure (%)"
+      "prob_failure": "Probability of Failure (%)",
+      "high_risk_badge": "High-Risk Zone"
     },
     "weibull": {
       "title": "Reliability Distribution Fitting (Weibull)",
@@ -145,6 +183,10 @@
     },
     "collapse": "Collapse",
     "expand": "Expand",
+    "common": {
+      "reset_zoom": "Reset Zoom",
+      "export_png": "Export PNG"
+    },
     "pareto": {
       "title": "Pareto Analysis",
       "desc": "Identify the critical 20% causes responsible for 80% of failures.",
@@ -175,7 +217,10 @@
       "all_equip": "All Equipment",
       "update": "Update",
       "loading": "Loading historical data...",
-      "no_data": "No failure logs matching current filters."
+      "no_data": "No failure logs matching current filters.",
+      "moving_avg": "Moving Avg (3)",
+      "ucl": "UCL (+2σ)",
+      "lcl": "LCL (-2σ)"
     },
     "nlp": {
       "title": "Artificial Intelligence (AI) Analysis",
@@ -260,7 +305,10 @@
       "show_baseline": "Show No Repair Baseline (V(t) = t)",
       "mtbf_note": "The Estimated MTBF corresponds to the theoretical mean of the fitted distribution and may differ from the historical/arithmetic MTBF due to distribution skewness (e.g., when beta is far from 1).",
       "min_tbx_label": "Min TBX Threshold (h)",
-      "intervals_details_title": "Adjustment Intervals Detail (TBF)"
+      "intervals_details_title": "Adjustment Intervals Detail (TBF)",
+      "histogram_title": "Histogram of Raw Intervals",
+      "histogram_x": "Interval Value (hrs)",
+      "histogram_y": "Frequency (Count)"
     },
     "event_plot": {
       "color_by": "Color By",
@@ -272,7 +320,18 @@
       "h_large": "Large (900px)",
       "h_xl": "Extra Large (1200px)",
       "bar_spacing": "Bar Thickness",
-      "category_spacing": "Category Spacing"
+      "category_spacing": "Category Spacing",
+      "title": "Event Plot Timeline",
+      "desc": "Visualize failure events over time for each asset.",
+      "select_all": "Select All",
+      "clear_all": "Clear All",
+      "from_label": "From:",
+      "to_label": "To:",
+      "min_dur_label": "Min Dur (hrs):",
+      "none_selected": "None selected",
+      "all_equipment": "All Equipment",
+      "n_selected": "{n} Selected",
+      "update": "Update"
     },
     "apm": {
       "title": "APM: Bad Actors & Reliability Growth",
@@ -412,6 +471,7 @@
       "fta_instruction": "Design the Fault Tree by adding logical nodes hierarchically to calculate global system reliability.",
       
       "chat_placeholder": "Type your technical query...",
+      "chat_error": "Sorry, an error occurred while contacting the Copilot. Please try again.",
       "send": "Send",
       "welcome_msg": "Hello. I am your Reliability Copilot. I can assist you in applying SAE JA1011 (RCM), IEC 60812 (FMECA), IEC 62740 (RCA), and ISO 20815 (RAM) standards. How can I help you today?",
       "q1": "What are the 7 steps of SAE JA1011?",
@@ -459,6 +519,67 @@
     "locked_rcm_fmeca": "To unlock RCM Assistant and FMECA RPN scoring, add and execute the 'FMECA Matrix' node in the Workbench.",
     "locked_ram_sim": "To unlock the RAM Simulator, add and execute the 'RAM Simulator' node in the Workbench.",
     "locked_apm": "To unlock the APM and Bad Actors section, add and execute a 'Trend' or 'Weibull' node in the Workbench.",
-    "locked_trend": "To unlock the KPI Trend section, add and execute the 'KPI Trend' node in the Workbench."
+    "locked_trend": "To unlock the KPI Trend section, add and execute the 'KPI Trend' node in the Workbench.",
+    "header_title": "Modular DAG Workbench",
+    "header_subtitle": "Real-time visual design of reliability analysis pipelines",
+    "executing": "Running...",
+    "add_block": "Add Block",
+    "cat_data_filters": "Data & Filters",
+    "block_data_source": "Data Source",
+    "block_filter": "Hierarchical Filter",
+    "cat_quant": "Quantitative Analysis",
+    "block_pareto": "Pareto 80/20",
+    "block_jackknife": "Jackknife",
+    "block_criticality": "3D Criticality Matrix",
+    "block_weibull": "Weibull 2P",
+    "block_kijima": "Kijima I / II",
+    "block_event_plot": "Event Timeline (TBF)",
+    "cat_ram": "RAM Assurance",
+    "block_ram": "RAM Simulator",
+    "block_apm": "Bad Actors APM",
+    "block_trend": "KPI Trend",
+    "cat_rcm_rca": "RCM & Root Cause",
+    "block_rcm": "RCM Wizard JA1011",
+    "block_fmeca": "FMECA RPN Matrix",
+    "block_rca": "RCA Root Cause",
+    "block_fta": "FTA Fault Tree",
+    "cat_ai_copilot": "AI Copilot",
+    "block_comment_mining": "NLP Text Mining",
+    "templates_btn": "Templates",
+    "templates_predefined": "Predefined Templates",
+    "template_basic_weibull_name": "Basic Weibull Fitting",
+    "template_basic_weibull_desc": "Source -> Filter -> Weibull 2P",
+    "template_kijima_repair_name": "Imperfect Repair (Kijima)",
+    "template_kijima_repair_desc": "Source -> Filter -> Kijima I/II/TD",
+    "template_ram_simulation_name": "RAM Monte Carlo Simulation",
+    "template_ram_simulation_desc": "Source -> Filter -> Weibull -> RAM",
+    "template_pareto_analysis_name": "Pareto + Jackknife Prioritization",
+    "template_pareto_analysis_desc": "Source -> Filter -> Pareto & Jackknife",
+    "template_trend_flow_name": "Temporal Trend Analysis",
+    "template_trend_flow_desc": "Source -> Filter -> KPI Trend & Weibull",
+    "template_rcm_fmeca_flow_name": "RCM + FMECA (SAE JA1011 / IEC 60812)",
+    "template_rcm_fmeca_flow_desc": "Source -> Filter -> RCM Wizard & FMECA Matrix",
+    "template_rca_fta_flow_name": "RCA + FTA (IEC 62740 / IEC 61025)",
+    "template_rca_fta_flow_desc": "Source -> Filter -> RCA Root Cause & Fault Tree",
+    "template_criticality_apm_flow_name": "Criticality + Bad Actors APM",
+    "template_criticality_apm_flow_desc": "Source -> Filter -> Criticality Matrix & APM",
+    "reset_zoom_title": "Reset Zoom",
+    "logs_console_title": "Log & Diagnostics Console",
+    "logs": "Logs",
+    "not_configured": "Not configured",
+    "locked_card_desc": "Add and run this block in the Workbench to activate it.",
+    "default_module": "Analysis Module",
+    "default_titles": {
+      "pareto": "Pareto Analysis (80/20)",
+      "jackknife": "Jackknife Diagram (RCM Criticality)",
+      "criticality": "3D Criticality Matrix",
+      "weibull_kijima": "Weibull Fitting & Kijima Repair",
+      "event_plot": "Event Timeline and TBF",
+      "ram_sim": "RAM Monte Carlo Simulator",
+      "apm": "APM Bad Actors and Growth",
+      "trend": "KPI and Reliability Trend",
+      "rcm_fmeca": "RCM & FMECA Analysis (JA1011 / IEC 60812)",
+      "rca_fta": "RCA Root Cause and FTA Fault Tree"
+    }
   }
 }

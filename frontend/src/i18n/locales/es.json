@@ -9,12 +9,19 @@
     "processing": "Subiendo...",
     "file": "Archivo:",
     "err_invalid": "Por favor selecciona un archivo CSV válido",
-    "err_failed": "La carga falló. Por favor intenta de nuevo."
+    "err_failed": "La carga falló. Por favor intenta de nuevo.",
+    "err_invalid_extension": "El archivo seleccionado no tiene extensión .csv",
+    "confirm": "Confirmar Carga",
+    "cancel": "Cancelar",
+    "quality_report": "{invalidDates} filas con fecha inválida fueron descartadas, {duplicates} duplicados eliminados",
+    "quality_report_dates_only": "{invalidDates} filas con fecha inválida fueron descartadas",
+    "quality_report_duplicates_only": "{duplicates} duplicados eliminados"
   },
   "sidebar": {
     "quick_actions": "Acciones Rápidas",
     "upload_new": "Subir Nuevos Datos",
     "reset_filters": "Restablecer Filtros",
+    "export_data": "Exportar Datos (CSV)",
     "export_pdf": "Exportar a PDF",
     "analysis_types": "Tipos de Análisis",
     "pareto": "Análisis de Pareto",
@@ -32,11 +39,40 @@
     "all_equip": "Todos los Equipos",
     "all_types": "Todos los Tipos",
     "apply": "Aplicar Filtros",
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "analysis_sections": "Secciones de Análisis",
+    "section_quant": "1. Cuantitativo",
+    "section_rcm_fmeca": "2. RCM & FMECA",
+    "section_rca_fta": "3. RCA & FTA",
+    "section_ram": "4. Aseguramiento RAM",
+    "section_copilot": "5. Copiloto IA",
+    "link_weibull_kijima": "Weibull & Kijima",
+    "link_event_plot": "Línea de Eventos",
+    "link_rcm_wizard": "Asistente RCM (JA1011)",
+    "link_fmeca_matrix": "Matriz FMECA (IEC 60812)",
+    "link_rca": "Causa Raíz RCA (IEC 62740)",
+    "link_fta": "Árbol de Fallas FTA (IEC 61025)",
+    "link_ram_sim": "Simulador RAM",
+    "link_apm": "Bad Actors APM",
+    "link_kpi_trend": "Tendencia de KPIs",
+    "link_ai_chat": "Chat Copiloto IA",
+    "link_nlp_mining": "Minería de Texto NLP",
+    "navigation": "Navegación",
+    "settings": "Configuración",
+    "settings_coming_soon": "Módulo de Configuración próximamente"
   },
   "dashboard": {
     "title": "Panel de Análisis",
     "desc": "Módulos de análisis independientes. Personaliza los filtros para explorar patrones de confiabilidad.",
+    "tab_disabled_message": "Aún no has ejecutado ningún análisis para esta pestaña. Configura y ejecuta el Workbench primero.",
+    "tabs": {
+      "workbench": "Workbench de Confiabilidad",
+      "quant": "Análisis Cuantitativo",
+      "rcm_fmea": "RCM & FMECA",
+      "rca_fta": "RCA & FTA",
+      "ram": "Aseguramiento RAM (ISO)",
+      "copilot": "Copiloto IA"
+    },
     "stats": {
       "records": "Registros Totales",
       "mtbf": "MTBF (Global)",
@@ -82,7 +118,8 @@
       "hrs_total": "hrs Inactividad (Total)",
       "x_axis": "Número de Fallos (Frecuencia)",
       "y_axis_avg": "Inactividad Promedio (MTTR)",
-      "y_axis_total": "Inactividad Total"
+      "y_axis_total": "Inactividad Total",
+      "acute_chronic_badge": "Zona Aguda y Crónica"
     },
     "criticality": {
       "title": "Matriz de Criticidad",
@@ -107,7 +144,8 @@
       "mttr": "MTTR (h)",
       "nodes": "Nodos",
       "hrs_failure": "hrs/fallo (MTTR)",
-      "prob_failure": "Probabilidad de Fallo (%)"
+      "prob_failure": "Probabilidad de Fallo (%)",
+      "high_risk_badge": "Zona de Alto Riesgo"
     },
     "weibull": {
       "title": "Ajuste de Distribución de Confiabilidad",
@@ -145,6 +183,10 @@
     },
     "collapse": "Ocultar",
     "expand": "Expandir",
+    "common": {
+      "reset_zoom": "Restablecer Zoom",
+      "export_png": "Exportar PNG"
+    },
     "pareto": {
       "title": "Análisis de Pareto",
       "desc": "Identifica el 20% de causas críticas responsables del 80% de las fallas.",
@@ -175,7 +217,10 @@
       "all_equip": "Todos los Equipos",
       "update": "Actualizar",
       "loading": "Cargando datos históricos...",
-      "no_data": "No hay registros de fallas que coincidan con los filtros activos."
+      "no_data": "No hay registros de fallas que coincidan con los filtros activos.",
+      "moving_avg": "Media Móvil (3)",
+      "ucl": "LSC (+2σ)",
+      "lcl": "LIC (-2σ)"
     },
     "nlp": {
       "title": "Análisis de Inteligencia Artificial (IA)",
@@ -260,7 +305,10 @@
       "show_baseline": "Línea Base No Reparar (V(t) = t)",
       "mtbf_note": "El MTBF Estimado corresponde a la media teórica de la distribución ajustada y puede diferir del MTBF histórico/aritmético debido a la asimetría de la distribución (por ejemplo, cuando beta es muy diferente de 1).",
       "min_tbx_label": "Umbral Mínimo TBX (h)",
-      "intervals_details_title": "Detalle de Intervalos a Ajustar (TBF)"
+      "intervals_details_title": "Detalle de Intervalos a Ajustar (TBF)",
+      "histogram_title": "Histograma de Intervalos Crudos",
+      "histogram_x": "Valor del Intervalo (hrs)",
+      "histogram_y": "Frecuencia (Cantidad)"
     },
     "event_plot": {
       "color_by": "Color Por",
@@ -272,7 +320,18 @@
       "h_large": "Grande (900px)",
       "h_xl": "Muy Grande (1200px)",
       "bar_spacing": "Grosor de Barra",
-      "category_spacing": "Espaciado de Categoría"
+      "category_spacing": "Espaciado de Categoría",
+      "title": "Línea de Tiempo de Eventos",
+      "desc": "Visualiza eventos de falla en el tiempo para cada activo.",
+      "select_all": "Seleccionar Todo",
+      "clear_all": "Limpiar Todo",
+      "from_label": "Desde:",
+      "to_label": "Hasta:",
+      "min_dur_label": "Dur. Mín (hrs):",
+      "none_selected": "Ninguno seleccionado",
+      "all_equipment": "Todos los Equipos",
+      "n_selected": "{n} Seleccionados",
+      "update": "Actualizar"
     },
     "apm": {
       "title": "APM: Peores Actores y Crecimiento de Confiabilidad",
@@ -412,6 +471,7 @@
       "fta_instruction": "Diseñe el Árbol de Fallas agregando nodos lógicos de forma jerárquica para calcular la confiabilidad global del sistema.",
       
       "chat_placeholder": "Escriba su consulta técnica...",
+      "chat_error": "Lo siento, ocurrió un error al consultar al Copiloto. Por favor intente nuevamente.",
       "send": "Enviar",
       "welcome_msg": "Hola. Soy su Copiloto de Confiabilidad. Puedo asistirle en la aplicación de las normativas SAE JA1011 (RCM), IEC 60812 (FMECA), IEC 62740 (RCA), e ISO 20815 (RAM). ¿En qué puedo ayudarle hoy?",
       "q1": "¿Cuáles son los 7 pasos de la SAE JA1011?",
@@ -459,6 +519,67 @@
     "locked_rcm_fmeca": "Para desbloquear el asistente RCM y la Matriz RPN, agregue y ejecute el nodo 'Matriz FMECA' en el Workbench.",
     "locked_ram_sim": "Para desbloquear el Simulador RAM, agregue y ejecute el nodo 'Simulador RAM' en el Workbench.",
     "locked_apm": "Para desbloquear la sección de APM y Bad Actors, agregue y ejecute un nodo de 'Tendencia' o 'Weibull' en el Workbench.",
-    "locked_trend": "Para desbloquear la Tendencia de KPIs, agregue y ejecute el nodo 'Tendencia de KPIs' en el Workbench."
+    "locked_trend": "Para desbloquear la Tendencia de KPIs, agregue y ejecute el nodo 'Tendencia de KPIs' en el Workbench.",
+    "header_title": "Workbench Modular DAG",
+    "header_subtitle": "Diseño visual de flujos de análisis de confiabilidad en tiempo real",
+    "executing": "Ejecutando...",
+    "add_block": "Añadir Bloque",
+    "cat_data_filters": "Datos & Filtros",
+    "block_data_source": "Fuente de Datos",
+    "block_filter": "Filtro Jerárquico",
+    "cat_quant": "Análisis Cuantitativo",
+    "block_pareto": "Pareto 80/20",
+    "block_jackknife": "Jackknife",
+    "block_criticality": "Matriz Criticidad 3D",
+    "block_weibull": "Weibull 2P",
+    "block_kijima": "Kijima I / II",
+    "block_event_plot": "Línea de Eventos (TBF)",
+    "cat_ram": "Aseguramiento RAM",
+    "block_ram": "Simulador RAM",
+    "block_apm": "Bad Actors APM",
+    "block_trend": "Tendencia KPI",
+    "cat_rcm_rca": "RCM & Causa Raíz",
+    "block_rcm": "Asistente RCM JA1011",
+    "block_fmeca": "Matriz FMECA RPN",
+    "block_rca": "Causa Raíz RCA",
+    "block_fta": "Árbol de Fallas FTA",
+    "cat_ai_copilot": "Copiloto IA",
+    "block_comment_mining": "Minería de Texto NLP",
+    "templates_btn": "Plantillas",
+    "templates_predefined": "Plantillas Predefinidas",
+    "template_basic_weibull_name": "Ajuste Weibull Básico",
+    "template_basic_weibull_desc": "Fuente -> Filtro -> Weibull 2P",
+    "template_kijima_repair_name": "Reparación Imperfecta (Kijima)",
+    "template_kijima_repair_desc": "Fuente -> Filtro -> Kijima I/II/TD",
+    "template_ram_simulation_name": "Simulación RAM Monte Carlo",
+    "template_ram_simulation_desc": "Fuente -> Filtro -> Weibull -> RAM",
+    "template_pareto_analysis_name": "Priorización Pareto + Jackknife",
+    "template_pareto_analysis_desc": "Fuente -> Filtro -> Pareto & Jackknife",
+    "template_trend_flow_name": "Análisis Temporal de Tendencias",
+    "template_trend_flow_desc": "Fuente -> Filtro -> KPI Trend & Weibull",
+    "template_rcm_fmeca_flow_name": "RCM + FMECA (SAE JA1011 / IEC 60812)",
+    "template_rcm_fmeca_flow_desc": "Fuente -> Filtro -> Asistente RCM & Matriz FMECA",
+    "template_rca_fta_flow_name": "RCA + FTA (IEC 62740 / IEC 61025)",
+    "template_rca_fta_flow_desc": "Fuente -> Filtro -> Causa Raíz RCA & Árbol de Fallas",
+    "template_criticality_apm_flow_name": "Criticidad + Bad Actors APM",
+    "template_criticality_apm_flow_desc": "Fuente -> Filtro -> Matriz Criticidad & APM",
+    "reset_zoom_title": "Restablecer Zoom",
+    "logs_console_title": "Consola de Registros & Diagnóstico",
+    "logs": "Logs",
+    "not_configured": "No configurado",
+    "locked_card_desc": "Agregue y ejecute este bloque en el Workbench para activarlo.",
+    "default_module": "Módulo de Análisis",
+    "default_titles": {
+      "pareto": "Análisis de Pareto (80/20)",
+      "jackknife": "Diagrama Jackknife (Criticidad RCM)",
+      "criticality": "Matriz de Criticidad 3D",
+      "weibull_kijima": "Ajuste Weibull & Reparación Kijima",
+      "event_plot": "Línea de Eventos y TBF",
+      "ram_sim": "Simulador RAM Monte Carlo",
+      "apm": "APM Bad Actors y Crecimiento",
+      "trend": "Tendencia de KPIs y Confiabilidad",
+      "rcm_fmeca": "Análisis RCM & FMECA (JA1011 / IEC 60812)",
+      "rca_fta": "Causa Raíz RCA y Árbol de Fallas FTA"
+    }
   }
 }

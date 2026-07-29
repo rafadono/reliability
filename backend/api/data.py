@@ -1,4 +1,5 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
+from fastapi.responses import StreamingResponse
 import pandas as pd
 import io
 import logging
@@ -52,6 +53,10 @@ async def upload_file(file: UploadFile = File(...)) -> UploadResponse:
         state.current_data = state.data_processor.treat_data(df)
         state.filter_manager = FilterManager(state.current_data)
 
+        quality_report = state.current_data.attrs.get("quality_report", {})
+        invalid_dates_count = quality_report.get("invalid_dates_count", 0)
+        duplicates_removed_count = quality_report.get("duplicates_removed_count", 0)
+
         logger.info(
             f"Uploaded {len(state.current_data)} records with columns: {state.current_data.columns.tolist()}"
         )
@@ -61,10 +66,29 @@ async def upload_file(file: UploadFile = File(...)) -> UploadResponse:
             rows_loaded=len(state.current_data),
             columns=state.current_data.columns.tolist(),
             message=f"Successfully loaded {len(state.current_data)} records",
+            invalid_dates_count=invalid_dates_count,
+            duplicates_removed_count=duplicates_removed_count,
         )
     except Exception as e:
         logger.error(f"Upload error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/data/export", tags=["Data"])
+async def export_data() -> StreamingResponse:
+    """Exports the currently loaded (cleaned) dataset as a downloadable CSV."""
+    if state.current_data is None:
+        raise HTTPException(status_code=400, detail="No data loaded")
+
+    output = io.StringIO()
+    state.current_data.to_csv(output, index=False)
+    output.seek(0)
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=reliability_dataset.csv"},
+    )
 
 
 @router.get("/data/available-filters", tags=["Data"])

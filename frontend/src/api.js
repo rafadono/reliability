@@ -24,6 +24,10 @@ export const apiService = {
     })
   },
 
+  exportData() {
+    return api.get('/data/export', { responseType: 'blob' })
+  },
+
   getFilters(plant, equipment, failureType) {
     const params = {}
     if (plant) params.plant = plant
@@ -202,6 +206,13 @@ export const apiService = {
     return api.post('/analysis/rca/suggest', {
       equipment,
       failure_event_date: failureEventDate
+    })
+  },
+
+  copilotChat(message, history = []) {
+    return api.post('/analysis/copilot-chat', {
+      message,
+      history
     })
   },
 

@@ -3,15 +3,15 @@
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
       <div>
         <div class="flex items-center gap-2">
-          <h2 class="text-xl font-bold text-gray-900 dark:text-white">Event Plot Timeline</h2>
-          <button 
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ $t('charts.event_plot.title') }}</h2>
+          <button
             @click="isCollapsed = !isCollapsed"
             class="text-xs font-semibold px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 transition-colors"
           >
-            {{ isCollapsed ? 'Expand ⌄' : 'Collapse ⌃' }}
+            {{ isCollapsed ? $t('charts.expand') + ' ⌄' : $t('charts.collapse') + ' ⌃' }}
           </button>
         </div>
-        <p class="text-sm text-gray-500 dark:text-slate-400">Visualize failure events over time for each asset.</p>
+        <p class="text-sm text-gray-500 dark:text-slate-400">{{ $t('charts.event_plot.desc') }}</p>
       </div>
       <div class="flex flex-wrap items-center gap-3 bg-gray-50 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700">
         
@@ -36,14 +36,14 @@
                 type="button" 
                 class="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline"
               >
-                Select All
+                {{ $t('charts.event_plot.select_all') }}
               </button>
-              <button 
-                @click="clearAll" 
-                type="button" 
+              <button
+                @click="clearAll"
+                type="button"
                 class="text-xs text-red-600 dark:text-red-400 font-semibold hover:underline"
               >
-                Clear All
+                {{ $t('charts.event_plot.clear_all') }}
               </button>
             </div>
             
@@ -64,28 +64,28 @@
         </div>
 
         <div class="flex items-center gap-1">
-          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">From:</span>
-          <input 
-            type="date" 
-            v-model="localFilters.dateFrom" 
-            :min="minAvailableDate" 
-            :max="localFilters.dateTo || maxAvailableDate" 
+          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">{{ $t('charts.event_plot.from_label') }}</span>
+          <input
+            type="date"
+            v-model="localFilters.dateFrom"
+            :min="minAvailableDate"
+            :max="localFilters.dateTo || maxAvailableDate"
             class="text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500"
           >
         </div>
         <div class="flex items-center gap-1">
-          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">To:</span>
-          <input 
-            type="date" 
-            v-model="localFilters.dateTo" 
-            :min="localFilters.dateFrom || minAvailableDate" 
-            :max="maxAvailableDate" 
+          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">{{ $t('charts.event_plot.to_label') }}</span>
+          <input
+            type="date"
+            v-model="localFilters.dateTo"
+            :min="localFilters.dateFrom || minAvailableDate"
+            :max="maxAvailableDate"
             class="text-sm border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 rounded focus:ring-blue-500"
           >
         </div>
         <div class="flex items-center gap-1">
-          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">Min Dur (hrs):</span>
-          <input 
+          <span class="text-xs font-medium text-gray-600 dark:text-slate-400">{{ $t('charts.event_plot.min_dur_label') }}</span>
+          <input
             type="number" 
             v-model.number="minDuration" 
             min="0" 
@@ -139,7 +139,7 @@
           >
           <span class="text-xs text-gray-500 dark:text-slate-400 w-8 text-right">{{ categoryPercentage }}</span>
         </div>
-        <button @click="loadAnalysis" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Update</button>
+        <button @click="loadAnalysis" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">{{ $t('charts.event_plot.update') }}</button>
       </div>
     </div>
     <div v-show="!isCollapsed">
@@ -160,9 +160,12 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { apiService } from '../../api'
 import { sharedState } from '../../sharedState'
 import ChartEventPlot from '../ChartEventPlot.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   availableEquipment: Array
@@ -194,12 +197,12 @@ const clearAll = () => {
 
 const dropdownLabel = computed(() => {
   if (selectedEquipments.value.length === 0) {
-    return 'None selected'
+    return t('charts.event_plot.none_selected')
   }
   if (selectedEquipments.value.length === props.availableEquipment.length) {
-    return 'All Equipment'
+    return t('charts.event_plot.all_equipment')
   }
-  return `${selectedEquipments.value.length} Selected`
+  return t('charts.event_plot.n_selected', { n: selectedEquipments.value.length })
 })
 
 const filteredEventPlotData = computed(() => {

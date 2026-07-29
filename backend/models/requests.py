@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 
 
 class UploadResponse(BaseModel):
@@ -7,6 +7,8 @@ class UploadResponse(BaseModel):
     rows_loaded: int
     columns: List[str]
     message: str
+    invalid_dates_count: Optional[int] = 0
+    duplicates_removed_count: Optional[int] = 0
 
 
 class FilterOptions(BaseModel):
@@ -144,4 +146,11 @@ class RamSimulateRequest(BaseModel):
 class RcaAnalysisRequest(BaseModel):
     equipment: str = Field(..., description="Equipment name")
     failure_event_date: Optional[str] = Field(None, description="Optional date of the failure event to analyze")
+
+
+class CopilotChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, description="User's chat message")
+    history: Optional[List[Dict[str, str]]] = Field(
+        None, description="Prior conversation turns as [{'role': 'user'|'assistant', 'content': '...'}]"
+    )
 

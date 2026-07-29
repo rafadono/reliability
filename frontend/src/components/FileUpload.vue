@@ -35,13 +35,38 @@
         </button>
       </div>
 
-      <div v-if="selectedFile" class="mt-4 p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg">
+      <div v-if="pendingFile" class="mt-4 p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg">
         <p class="text-sm text-gray-700 dark:text-slate-300">
-          <strong>{{ $t('upload.file') }}</strong> {{ selectedFile.name }}
+          {{ pendingFile.name }} &mdash; {{ formatFileSize(pendingFile.size) }}
         </p>
+        <div class="mt-3 flex items-center justify-center gap-3">
+          <button
+            @click="confirmUpload"
+            :disabled="isLoading"
+            class="px-4 py-1.5 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50"
+          >
+            {{ $t('upload.confirm') }}
+          </button>
+          <button
+            @click="cancelSelection"
+            :disabled="isLoading"
+            class="px-4 py-1.5 text-sm font-medium rounded-lg bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+          >
+            {{ $t('upload.cancel') }}
+          </button>
+        </div>
         <div v-if="isLoading" class="mt-2 text-blue-600 dark:text-blue-400 text-sm font-medium text-center flex items-center justify-center gap-2">
           {{ $t('upload.processing') }}
         </div>
+      </div>
+
+      <div v-else-if="selectedFile" class="mt-4 p-3 bg-gray-50 dark:bg-slate-900/50 rounded-lg">
+        <p class="text-sm text-gray-700 dark:text-slate-300">
+          <strong>{{ $t('upload.file') }}</strong> {{ selectedFile.name }}
+        </p>
+        <p v-if="qualityMessage" class="mt-1 text-xs text-amber-700 dark:text-amber-400">
+          {{ qualityMessage }}
+        </p>
       </div>
 
       <div v-if="error" class="mt-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg">
@@ -60,9 +85,11 @@ const { t } = useI18n()
 const emit = defineEmits(['file-uploaded'])
 
 const selectedFile = ref(null)
+const pendingFile = ref(null)
 const isDragging = ref(false)
 const isLoading = ref(false)
 const error = ref('')
+const qualityMessage = ref('')
 const fileInput = ref(null)
 
 const isCsvFile = (file) => {
@@ -72,39 +99,81 @@ const isCsvFile = (file) => {
   return name.endsWith('.csv') || type === 'text/csv' || type.includes('csv') || type === 'application/vnd.ms-excel' || type === ''
 }
 
-const handleFileSelect = (event) => {
-  const file = event.target.files[0]
-  if (isCsvFile(file)) {
-    selectedFile.value = file
-    error.value = ''
-    uploadFile()
-  } else {
-    error.value = t('upload.err_invalid')
+// First line of defensive feedback, before even offering the confirm step.
+const hasCsvExtension = (file) => {
+  if (!file || !file.name) return false
+  return file.name.toLowerCase().endsWith('.csv')
+}
+
+const formatFileSize = (bytes) => {
+  if (!bytes && bytes !== 0) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
+const selectCandidateFile = (file) => {
+  if (!file) return
+  if (!hasCsvExtension(file)) {
+    error.value = t('upload.err_invalid_extension')
+    pendingFile.value = null
+    return
   }
+  error.value = ''
+  qualityMessage.value = ''
+  pendingFile.value = file
+}
+
+const handleFileSelect = (event) => {
+  selectCandidateFile(event.target.files[0])
 }
 
 const handleDrop = (event) => {
   event.preventDefault()
   isDragging.value = false
-  
-  const file = event.dataTransfer.files[0]
-  if (isCsvFile(file)) {
-    selectedFile.value = file
-    error.value = ''
-    uploadFile()
-  } else {
-    error.value = t('upload.err_invalid')
+  selectCandidateFile(event.dataTransfer.files[0])
+}
+
+const cancelSelection = () => {
+  pendingFile.value = null
+  error.value = ''
+  if (fileInput.value) {
+    fileInput.value.value = ''
   }
 }
 
-const uploadFile = async () => {
-  if (!selectedFile.value) return
+const buildQualityMessage = (data) => {
+  const invalidDates = data?.invalid_dates_count || 0
+  const duplicates = data?.duplicates_removed_count || 0
+  if (invalidDates > 0 && duplicates > 0) {
+    return t('upload.quality_report', { invalidDates, duplicates })
+  } else if (invalidDates > 0) {
+    return t('upload.quality_report_dates_only', { invalidDates })
+  } else if (duplicates > 0) {
+    return t('upload.quality_report_duplicates_only', { duplicates })
+  }
+  return ''
+}
+
+const confirmUpload = async () => {
+  const file = pendingFile.value
+  if (!file) return
+
+  // Keep the existing permissive MIME/extension acceptance for the actual upload call.
+  if (!isCsvFile(file)) {
+    error.value = t('upload.err_invalid')
+    return
+  }
 
   isLoading.value = true
   error.value = ''
+  qualityMessage.value = ''
 
   try {
-    await apiService.upload(selectedFile.value)
+    const response = await apiService.upload(file)
+    selectedFile.value = file
+    pendingFile.value = null
+    qualityMessage.value = buildQualityMessage(response.data)
     emit('file-uploaded')
   } catch (err) {
     error.value = err.response?.data?.detail || t('upload.err_failed')

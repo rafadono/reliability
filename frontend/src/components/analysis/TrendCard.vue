@@ -91,7 +91,11 @@
         <span class="text-gray-500 dark:text-slate-400 animate-pulse text-sm">{{ $t('charts.kpi.loading') }}</span>
       </div>
       <div v-else-if="trendData && Object.keys(trendData).length > 0">
-        <ChartTrend :data="trendData" :selectedKpi="selectedKpi" :kpiLabel="kpiLabel" />
+        <ChartTrend :data="trendData" :selectedKpi="selectedKpi" :kpiLabel="kpiLabel" @point-click="handlePointClick" />
+        <p v-if="lastClickedPoint" class="mt-2 text-xs text-gray-500 dark:text-slate-400">
+          <span class="font-semibold text-gray-700 dark:text-slate-300">{{ lastClickedPoint.series }}</span>
+          — {{ lastClickedPoint.month }}: <span class="font-mono">{{ lastClickedPoint.value }}</span>
+        </p>
       </div>
       <div v-else class="text-center py-12 text-gray-500 dark:text-slate-400 text-sm">
         {{ $t('charts.kpi.no_data') }}
@@ -127,6 +131,12 @@ const selectedEquipments = ref([])
 const dropdownEl = ref(null)
 const trendData = ref({})
 const loading = ref(false)
+const lastClickedPoint = ref(null)
+
+const handlePointClick = (point) => {
+  lastClickedPoint.value = point
+  console.log('Trend point clicked:', point)
+}
 
 const isAllSelected = computed(() => {
   return props.availableEquipment && selectedEquipments.value.length === props.availableEquipment.length

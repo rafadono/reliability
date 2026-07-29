@@ -34,9 +34,6 @@ STREAMLIT_HEADLESS = os.getenv("STREAMLIT_HEADLESS", "true").lower() == "true"
 
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", 50))
 SUPPORTED_FILE_FORMATS = ["csv"]
-CSV_ENCODING = "latin-1"
-CSV_SEPARATOR = ";"
-CSV_DECIMAL = ","
 
 EXCLUDED_MODELS = [
     "Weibull_2P",

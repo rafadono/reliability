@@ -38,21 +38,34 @@ class DataProcessor:
                 rename_dict[col] = "Censored"
             elif col_lower in ["comentario", "comment"]:
                 rename_dict[col] = "Comment"
+            elif col_lower in ["planta", "plant", "site"]:
+                rename_dict[col] = "Plant"
 
         result = result.rename(columns=rename_dict)
 
 
+        invalid_dates_count = 0
         if "Date" in result.columns and "Time" in result.columns:
+            was_missing = result["Date"].isna() | (
+                result["Date"].astype(str).str.strip().isin(["", "nan", "NaT", "None"])
+            )
             result["Start_Date"] = pd.to_datetime(
                 result["Date"].astype(str) + " " + result["Time"].astype(str),
                 dayfirst=True,
                 format="mixed",
                 errors="coerce",
             )
+            became_nat = result["Start_Date"].isna()
+            invalid_dates_count = int((became_nat & ~was_missing).sum())
         elif "Date" in result.columns:
+            was_missing = result["Date"].isna() | (
+                result["Date"].astype(str).str.strip().isin(["", "nan", "NaT", "None"])
+            )
             result["Start_Date"] = pd.to_datetime(
                 result["Date"], dayfirst=True, format="mixed", errors="coerce"
             )
+            became_nat = result["Start_Date"].isna()
+            invalid_dates_count = int((became_nat & ~was_missing).sum())
 
         if "TTX" not in result.columns:
             if "Days" in result.columns:
@@ -60,7 +73,9 @@ class DataProcessor:
             else:
                 result["TTX"] = 0.0
 
+        rows_before_dedup = len(result)
         result = result.drop_duplicates()
+        duplicates_removed_count = rows_before_dedup - len(result)
 
         for col in ["TTX", "Days", "TBX"]:
             if col in result.columns:
@@ -86,6 +101,11 @@ class DataProcessor:
                 ).dt.total_seconds() / 3600.0
                 result["TBX"] = result["TBX"].fillna(0.0).clip(lower=0.0)
                 result = result.drop(columns=["Prev_End_Date"])
+
+        result.attrs["quality_report"] = {
+            "invalid_dates_count": invalid_dates_count,
+            "duplicates_removed_count": int(duplicates_removed_count),
+        }
 
         return result
 

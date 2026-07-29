@@ -25,6 +25,7 @@ from models.requests import (
     FmecaRpnRequest,
     RamSimulateRequest,
     RcaAnalysisRequest,
+    CopilotChatRequest,
 )
 from src.reliability_analysis.analysis.pareto import ParetoAnalyzer
 from src.reliability_analysis.analysis.models import ReliabilityFitter, KijimaFitter
@@ -1821,6 +1822,67 @@ async def rca_suggest(req: RcaAnalysisRequest) -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"RCA suggestion error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+def _build_copilot_context_summary() -> str:
+    """
+    Builds a cheap, descriptive-stats-only summary of the currently loaded dataset and
+    active filters, to give the Copilot chat some grounding without heavy computation.
+    """
+    if state.current_data is None or state.current_data.empty:
+        return ""
+
+    df = state.current_data
+    parts = [f"{len(df)} registros cargados"]
+
+    if "Equipment" in df.columns:
+        parts.append(f"{df['Equipment'].nunique()} equipos distintos")
+    if "Type" in df.columns:
+        parts.append(f"{df['Type'].nunique()} tipos de evento")
+
+    if state.filter_manager is not None:
+        try:
+            filter_state = state.filter_manager.get_state()
+            active_filters = []
+            if filter_state.get("plant"):
+                active_filters.append(f"plantas={', '.join(filter_state['plant'])}")
+            if filter_state.get("equipment"):
+                active_filters.append(f"equipos={', '.join(filter_state['equipment'])}")
+            if filter_state.get("types"):
+                active_filters.append(f"tipos={', '.join(filter_state['types'])}")
+            if filter_state.get("failure_modes"):
+                active_filters.append(f"modos={', '.join(filter_state['failure_modes'])}")
+
+            if active_filters:
+                parts.append(f"filtros activos: {'; '.join(active_filters)}")
+                parts.append(f"{filter_state.get('filtered_count', len(df))} registros tras filtros")
+        except Exception as ex:
+            logger.warning(f"Could not read filter state for copilot context: {ex}")
+
+    return ", ".join(parts)
+
+
+@router.post("/analysis/copilot-chat", tags=["Analysis"])
+async def copilot_chat(req: CopilotChatRequest) -> Dict[str, Any]:
+    """Conversational endpoint for the Reliability Copilot chat widget."""
+    message = (req.message or "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    try:
+        context_summary = _build_copilot_context_summary()
+        history = req.history or []
+
+        response_text = LlmService.get_copilot_response(message, history, context_summary)
+
+        return {
+            "status": "success",
+            "response": response_text,
+            "context_used": bool(context_summary),
+        }
+    except Exception as e:
+        logger.error(f"Copilot chat error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
 
 

@@ -44,7 +44,7 @@
     </nav>
 
     <div class="flex h-[calc(100vh-80px)]">
-      <Sidebar 
+      <Sidebar
         v-show="isSidebarOpen"
         @notify="showNotification"
         @export-pdf="handleExportPDF"
@@ -53,7 +53,7 @@
       />
       <main class="flex-1 overflow-auto">
         <div id="dashboard-content" class="min-h-full">
-          <Dashboard 
+          <Dashboard
             ref="dashboardRef"
             :key="dashboardKey"
             :isLoading="isLoading"
@@ -61,6 +61,7 @@
             @filters-changed="handleFiltersChanged"
             @upload-file="handleSidebarUpload"
             @reset="handleReset"
+            @tab-changed="handleTabChanged"
           />
         </div>
       </main>
@@ -73,7 +74,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Dashboard from './components/Dashboard.vue'
 import Sidebar from './components/Sidebar.vue'
@@ -81,18 +82,38 @@ import { apiService } from './api'
 import html2pdf from 'html2pdf.js'
 import { sharedState } from './sharedState'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const isLoading = ref(false)
 const notification = ref('')
 const dashboardKey = ref(0)
 const isSidebarOpen = ref(true)
 const isDarkMode = ref(false)
 
-const globalActiveTab = ref('workbench')
+// Deep-linking: the active tab lives in the URL's ?tab= query param so it can be
+// bookmarked/shared and survives refresh, without introducing a full vue-router.
+const initialTabFromUrl = new URLSearchParams(window.location.search).get('tab')
+const globalActiveTab = ref(initialTabFromUrl || 'workbench')
 const dashboardRef = ref(null)
+
+const updateUrlTab = (tabId) => {
+  const url = new URL(window.location.href)
+  url.searchParams.set('tab', tabId)
+  window.history.pushState({ tab: tabId }, '', url)
+}
+
+const handleTabChanged = (tabId) => {
+  globalActiveTab.value = tabId
+  updateUrlTab(tabId)
+}
+
+const handlePopState = () => {
+  const tabFromUrl = new URLSearchParams(window.location.search).get('tab')
+  globalActiveTab.value = tabFromUrl || 'workbench'
+}
 
 const handleSelectTabCard = (data) => {
   globalActiveTab.value = data.tabId
+  updateUrlTab(data.tabId)
   if (dashboardRef.value) {
     dashboardRef.value.changeTabAndScroll(data.tabId, data.cardId)
   }
@@ -127,7 +148,17 @@ const handleSidebarUpload = async (file) => {
   try {
     const response = await apiService.upload(file)
     if (response.data.status === 'success') {
-      showNotification('New file uploaded successfully')
+      const invalidDates = response.data.invalid_dates_count || 0
+      const duplicates = response.data.duplicates_removed_count || 0
+      let message = 'New file uploaded successfully'
+      if (invalidDates > 0 && duplicates > 0) {
+        message += ' — ' + t('upload.quality_report', { invalidDates, duplicates })
+      } else if (invalidDates > 0) {
+        message += ' — ' + t('upload.quality_report_dates_only', { invalidDates })
+      } else if (duplicates > 0) {
+        message += ' — ' + t('upload.quality_report_duplicates_only', { duplicates })
+      }
+      showNotification(message)
       if (dashboardRef.value) {
         await dashboardRef.value.loadInitialFilters()
       }
@@ -141,6 +172,9 @@ const handleSidebarUpload = async (file) => {
 }
 
 const handleReset = async () => {
+  if (!window.confirm('¿Seguro que quieres reiniciar todos los filtros y los análisis calculados? Esta acción no se puede deshacer.')) {
+    return
+  }
   isLoading.value = true
   try {
     await apiService.resetFilters()
@@ -168,12 +202,21 @@ const handleReset = async () => {
 const handleExportPDF = () => {
   showNotification('Generating PDF, please wait...')
   const element = document.getElementById('dashboard-content')
-  
+
+  // Cap the effective html2canvas scale so wide content (the Workbench canvas,
+  // FTA/Ishikawa diagrams) never produces a canvas past the ~16k px browsers allow,
+  // which previously clipped or silently failed to render on those tabs.
+  const MAX_CANVAS_DIMENSION = 14000
+  const largestDimension = Math.max(element.scrollWidth, element.scrollHeight)
+  const safeScale = largestDimension * 2 > MAX_CANVAS_DIMENSION
+    ? Math.max(1, MAX_CANVAS_DIMENSION / largestDimension)
+    : 2
+
   const opt = {
     margin:       [0.3, 0.3],
     filename:     'Reliability_Report.pdf',
     image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true, logging: false },
+    html2canvas:  { scale: safeScale, useCORS: true, logging: false },
     jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' },
     pagebreak:    { mode: ['css', 'legacy'], avoid: '.card' }
   }
@@ -204,5 +247,10 @@ onMounted(async () => {
     document.documentElement.classList.remove('dark')
   }
 
+  window.addEventListener('popstate', handlePopState)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('popstate', handlePopState)
 })
 </script>

@@ -1,5 +1,18 @@
 <template>
   <div class="w-full">
+    <div class="flex justify-between items-center mb-1 flex-wrap gap-2">
+      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-full px-2 py-0.5">
+        ▲ {{ $t('charts.criticality.high_risk_badge') }}
+      </span>
+      <div class="flex gap-2">
+        <button @click="handleResetZoom" type="button" class="text-[10px] px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+          {{ $t('charts.common.reset_zoom') }}
+        </button>
+        <button @click="handleExport" type="button" class="text-[10px] px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+          {{ $t('charts.common.export_png') }}
+        </button>
+      </div>
+    </div>
     <div class="h-[400px] relative w-full bg-white dark:bg-slate-800 p-2 rounded-lg border border-gray-100 dark:border-slate-700 transition-colors duration-300">
       <canvas ref="chartCanvas"></canvas>
     </div>
@@ -9,9 +22,11 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { Chart as ChartJS, registerables } from 'chart.js'
+import zoomPlugin from 'chartjs-plugin-zoom'
 import { useI18n } from 'vue-i18n'
+import { downloadChartImage } from '../utils/chartExport'
 
-ChartJS.register(...registerables)
+ChartJS.register(...registerables, zoomPlugin)
 
 const { t, locale } = useI18n()
 
@@ -24,6 +39,14 @@ const props = defineProps({
 
 const chartCanvas = ref(null)
 let chartInstance = null
+
+const handleResetZoom = () => {
+  if (chartInstance) chartInstance.resetZoom()
+}
+
+const handleExport = () => {
+  downloadChartImage(chartInstance, 'criticality-chart.png')
+}
 
 const quadrantPlugin = {
   id: 'quadrant',
@@ -98,6 +121,14 @@ const createChart = () => {
         quadrant: {
           avgX: props.metricX === 'probability' ? (props.data.averages?.probability * 100 || 0) : (props.data.averages?.failures || 0),
           avgY: props.data.averages?.avg_downtime || 0
+        },
+        zoom: {
+          pan: { enabled: true, mode: 'xy' },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'xy'
+          }
         }
       },
       scales: {

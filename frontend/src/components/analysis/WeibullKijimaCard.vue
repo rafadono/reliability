@@ -180,8 +180,23 @@
           </div>
         </div>
 
+        <!-- Chart: Histogram of raw TBX/TTX interval data used for the fit -->
+        <div
+          v-if="histogramValues.length > 0"
+          class="bg-white dark:bg-slate-800 p-4 rounded border border-gray-200 dark:border-slate-700 shadow-sm"
+        >
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="font-bold text-gray-800 dark:text-white">
+              {{ $t('charts.kijima.histogram_title') }} ({{ activeTab === 'TBX' ? 'TBF' : 'TTX' }})
+            </h3>
+          </div>
+          <div class="relative h-64">
+            <canvas ref="histChartRef"></canvas>
+          </div>
+        </div>
+
         <!-- Chart 3: Virtual Age V(t) (TBX Mode and Collapsible) -->
-        <div 
+        <div
           v-if="activeTab === 'TBX'"
           class="bg-white dark:bg-slate-800 p-4 rounded border border-gray-200 dark:border-slate-700 shadow-sm"
         >
@@ -612,10 +627,21 @@ const comparisonTableData = computed(() => {
 const relChartRef = ref(null)
 const hazardChartRef = ref(null)
 const vAgeChartRef = ref(null)
+const histChartRef = ref(null)
 
 let relChartInstance = null
 let hazardChartInstance = null
 let vAgeChartInstance = null
+let histChartInstance = null
+
+// Raw TBX/TTX interval values actually used for the current fit (excludes the
+// synthetic "baseline start" row), sourced from the same `intervals` array the
+// backend already returns and that feeds the details table above.
+const histogramValues = computed(() => {
+  return fittedIntervals.value
+    .filter(item => !item.is_baseline && item.tbx != null && isFinite(item.tbx) && item.tbx > 0)
+    .map(item => item.tbx)
+})
 
 const toggleExpand = (chartKey) => {
   if (expandedChart.value === chartKey) {
@@ -764,6 +790,77 @@ const renderCharts = () => {
   if (activeTab.value === 'TBX') {
     renderVAgeChart()
   }
+  nextTick(() => renderHistogramChart())
+}
+
+// Simple binned histogram (Sturges-ish bin count) of the raw TBX/TTX
+// intervals used for the fit, so goodness-of-fit can be judged visually
+// against the fitted R(t)/h(t) curves above.
+const renderHistogramChart = () => {
+  if (!histChartRef.value) return
+  if (histChartInstance) {
+    histChartInstance.destroy()
+    histChartInstance = null
+  }
+  const values = histogramValues.value
+  if (values.length === 0) return
+
+  const isDark = document.documentElement.classList.contains('dark')
+  const textColor = isDark ? '#cbd5e1' : '#475569'
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'
+  const barColor = isDark ? 'rgba(99, 102, 241, 0.6)' : 'rgba(99, 102, 241, 0.55)'
+  const barBorder = '#6366f1'
+
+  const minVal = Math.min(...values)
+  const maxVal = Math.max(...values)
+  const binCount = Math.max(5, Math.min(15, Math.ceil(Math.sqrt(values.length))))
+  const binWidth = (maxVal - minVal) / binCount || 1
+  const bins = new Array(binCount).fill(0)
+  values.forEach(v => {
+    let idx = Math.floor((v - minVal) / binWidth)
+    if (idx >= binCount) idx = binCount - 1
+    if (idx < 0) idx = 0
+    bins[idx]++
+  })
+  const labels = bins.map((_, i) => {
+    const lo = minVal + i * binWidth
+    const hi = lo + binWidth
+    return `${lo.toFixed(0)}-${hi.toFixed(0)}`
+  })
+
+  histChartInstance = new Chart(histChartRef.value, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: t('charts.kijima.histogram_title'),
+        data: bins,
+        backgroundColor: barColor,
+        borderColor: barBorder,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          ticks: { color: textColor },
+          grid: { color: gridColor },
+          title: { display: true, text: t('charts.kijima.histogram_x'), color: textColor }
+        },
+        y: {
+          ticks: { color: textColor },
+          grid: { color: gridColor },
+          title: { display: true, text: t('charts.kijima.histogram_y'), color: textColor },
+          beginAtZero: true
+        }
+      }
+    }
+  })
 }
 
 const renderRelAndHazardCharts = () => {

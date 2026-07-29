@@ -99,6 +99,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { apiService } from '../../api'
 
 const { t } = useI18n()
 
@@ -148,32 +149,31 @@ const sendMessage = async () => {
   await scrollToBottom()
   typing.value = true
 
-  // Simulamos una respuesta sofisticada del Agente Coordinador bilingüe
-  setTimeout(async () => {
-    let aiResponse = ''
-    const lowerText = userText.toLowerCase()
+  // Build conversation history for the backend (excludes the message we just pushed,
+  // which is sent separately as `message`).
+  const history = messages.value
+    .slice(0, -1)
+    .filter(m => m.role === 'user' || m.role === 'assistant')
+    .map(m => ({ role: m.role, content: m.content }))
 
-    if (lowerText.includes('rcm') || lowerText.includes('ja1011') || lowerText.includes('ja1012')) {
-      aiResponse = t('charts.iso_analysis.res_rcm')
-    } else if (lowerText.includes('rpn') || lowerText.includes('fmeca') || lowerText.includes('60812') || lowerText.includes('risk') || lowerText.includes('riesgo')) {
-      aiResponse = t('charts.iso_analysis.res_rpn')
-    } else if (lowerText.includes('iso 20815') || lowerText.includes('ram')) {
-      aiResponse = t('charts.iso_analysis.res_ram')
-    } else if (lowerText.includes('rodamiento') || lowerText.includes('falla') || lowerText.includes('bearing') || lowerText.includes('failure')) {
-      aiResponse = t('charts.iso_analysis.res_rodamiento')
-    } else {
-      aiResponse = t('charts.iso_analysis.res_default')
-    }
-
+  try {
+    const { data } = await apiService.copilotChat(userText, history)
     messages.value.push({
       role: 'assistant',
-      content: aiResponse,
+      content: data.response || t('charts.iso_analysis.res_default'),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     })
-
+  } catch (error) {
+    console.error('Copilot chat error:', error)
+    messages.value.push({
+      role: 'assistant',
+      content: t('charts.iso_analysis.chat_error') || 'Lo siento, ocurrió un error al consultar al Copiloto. Por favor intente nuevamente.',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    })
+  } finally {
     typing.value = false
     await scrollToBottom()
-  }, 1200)
+  }
 }
 
 onMounted(() => {

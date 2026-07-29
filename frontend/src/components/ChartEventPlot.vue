@@ -1,5 +1,13 @@
 <template>
   <div>
+    <div class="flex justify-end gap-2 mb-1">
+      <button @click="handleResetZoom" type="button" class="text-[10px] px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+        Reset Zoom
+      </button>
+      <button @click="handleExport" type="button" class="text-[10px] px-2 py-1 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+        Export PNG
+      </button>
+    </div>
     <div :style="{ height: computedHeight + 'px' }" class="relative w-full bg-white dark:bg-slate-800 p-2 rounded-lg border border-gray-100 dark:border-slate-700 transition-colors duration-300">
       <canvas ref="chartCanvas"></canvas>
     </div>
@@ -18,8 +26,10 @@
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { Chart as ChartJS, registerables } from 'chart.js'
 import 'chartjs-adapter-date-fns'
+import zoomPlugin from 'chartjs-plugin-zoom'
+import { downloadChartImage } from '../utils/chartExport'
 
-ChartJS.register(...registerables)
+ChartJS.register(...registerables, zoomPlugin)
 
 const props = defineProps({
   data: Object,
@@ -50,6 +60,14 @@ const computedHeight = computed(() => {
 const chartCanvas = ref(null)
 let chartInstance = null
 const typeLegendItems = ref([])
+
+const handleResetZoom = () => {
+  if (chartInstance) chartInstance.resetZoom()
+}
+
+const handleExport = () => {
+  downloadChartImage(chartInstance, 'event-plot-chart.png')
+}
 
 const COLORS = [
   'rgba(239, 68, 68, 0.75)',
@@ -176,6 +194,14 @@ const createChart = () => {
                 `End: ${fmt(raw.x[1])}`
               ]
             }
+          }
+        },
+        zoom: {
+          pan: { enabled: true, mode: 'x' },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'x'
           }
         }
       },

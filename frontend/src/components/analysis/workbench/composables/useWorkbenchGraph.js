@@ -145,11 +145,24 @@ export function useWorkbenchGraph(emit) {
   }
 
   const deleteBlock = (nodeId) => {
+    if (!window.confirm('¿Seguro que quieres eliminar este bloque? Esta acción no se puede deshacer.')) {
+      return
+    }
     nodes.value = nodes.value.filter(n => n.id !== nodeId)
     edges.value = edges.value.filter(e => e.source !== nodeId && e.target !== nodeId)
     if (selectedNodeId.value === nodeId) {
       inspectorOpen.value = false
       selectedNodeId.value = null
+    }
+  }
+
+  // Nudge de posición por teclado (accesibilidad): mueve un nodo por un delta
+  // en px, reutilizando el mismo mecanismo de mutación que el arrastre con mouse.
+  const nudgeNode = (nodeId, dx, dy) => {
+    const node = nodes.value.find(n => n.id === nodeId)
+    if (node) {
+      node.x = Math.round(node.x + dx)
+      node.y = Math.round(node.y + dy)
     }
   }
 
@@ -643,6 +656,7 @@ export function useWorkbenchGraph(emit) {
     selectNode,
     addBlock,
     deleteBlock,
+    nudgeNode,
     startConnection,
     updateConnectionCursor,
     completeConnection,

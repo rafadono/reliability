@@ -125,12 +125,12 @@
               <line x1="0" y1="60" x2="500" y2="60" stroke="#f1f5f9" stroke-width="1" class="dark:stroke-slate-800" />
               <line x1="0" y1="100" x2="500" y2="100" stroke="#e2e8f0" stroke-width="1" class="dark:stroke-slate-700" />
               
-              <!-- Línea de datos -->
-              <path 
-                :d="svgPath" 
-                fill="none" 
-                stroke="url(#gradient-stroke)" 
-                stroke-width="3" 
+              <!-- Línea de datos: color sólido, consciente del tema (ya no un degradado decorativo sin relación con los valores) -->
+              <path
+                :d="svgPath"
+                fill="none"
+                :stroke="lineColor"
+                stroke-width="3"
                 stroke-linecap="round"
                 class="transition-all duration-500"
               />
@@ -160,13 +160,6 @@
               >
                 {{ pt.month }}
               </text>
-
-              <defs>
-                <linearGradient id="gradient-stroke" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="#3b82f6" />
-                  <stop offset="100%" stop-color="#d97706" />
-                </linearGradient>
-              </defs>
             </svg>
           </div>
         </div>
@@ -195,7 +188,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { apiService } from '../../api'
 import { sharedState } from '../../sharedState'
 
@@ -211,6 +204,17 @@ const preventiveEfficiency = ref(0.8)
 const logisticsDelay = ref(4.0)
 const loading = ref(false)
 const results = ref({})
+
+// This SVG chart is hand-rolled (not Chart.js), so unlike the other analysis
+// charts it has no chart instance to re-render on theme changes. Track dark
+// mode in a ref driven by the same 'theme-changed' event the Chart.js-based
+// cards listen for, and derive the line color from it reactively.
+const isDark = ref(typeof document !== 'undefined' && document.documentElement.classList.contains('dark'))
+const lineColor = computed(() => (isDark.value ? '#fbbf24' : '#d97706')) // amber-400 / amber-600, matching this card's accent color
+
+const handleThemeChange = () => {
+  isDark.value = document.documentElement.classList.contains('dark')
+}
 
 const runSimulation = async () => {
   loading.value = true
@@ -313,6 +317,11 @@ onMounted(() => {
   if (!sharedState.ram) {
     runSimulation()
   }
+  window.addEventListener('theme-changed', handleThemeChange)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('theme-changed', handleThemeChange)
 })
 </script>
 

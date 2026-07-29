@@ -1,6 +1,6 @@
 <template>
-  <div 
-    class="workbench-canvas flex-1 min-h-[580px] relative overflow-hidden bg-slate-50 dark:bg-slate-950 cursor-grab active:cursor-grabbing select-none"
+  <div
+    class="workbench-canvas flex-1 min-h-[400px] relative overflow-auto bg-slate-50 dark:bg-slate-950 cursor-grab active:cursor-grabbing select-none"
     @mousedown="startCanvasPan"
     @mousemove="onMouseMove"
     @mouseup="onMouseUp"
@@ -55,8 +55,8 @@
       </svg>
 
       <!-- Tarjetas de Nodos -->
-      <div 
-        v-for="node in nodes" 
+      <div
+        v-for="node in nodes"
         :key="node.id"
         class="node-card absolute w-52 bg-white dark:bg-slate-900 border rounded-xl shadow-lg transition-shadow duration-200 cursor-move"
         :class="[
@@ -64,8 +64,11 @@
           node.status === 'running' ? 'animate-pulse border-amber-500' : ''
         ]"
         :style="{ left: `${node.x}px`, top: `${node.y}px` }"
+        tabindex="0"
         @mousedown.stop="startNodeDrag(node.id, $event)"
         @click.stop="$emit('select-node', node.id)"
+        @focus="$emit('select-node', node.id)"
+        @keydown="handleNodeKeydown(node.id, $event)"
       >
         <!-- Cabecera del Nodo -->
         <div class="px-3 py-2 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-gray-50/50 dark:bg-slate-800/50 rounded-t-xl">
@@ -204,8 +207,36 @@ const emit = defineEmits([
   'update-connection-cursor',
   'complete-connection',
   'end-connection',
-  'navigate'
+  'navigate',
+  'delete-node',
+  'nudge-node'
 ])
+
+// Accesibilidad por teclado: con el nodo enfocado (tabindex="0"), Delete/Backspace
+// lo elimina (con confirmación, vía el mismo deleteBlock del composable) y las
+// flechas lo desplazan una cantidad fija de píxeles, reutilizando la misma
+// ruta de mutación de posición que el arrastre con mouse.
+const NUDGE_STEP = 10
+
+const handleNodeKeydown = (nodeId, event) => {
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    event.preventDefault()
+    emit('delete-node', nodeId)
+    return
+  }
+
+  const arrowDeltas = {
+    ArrowUp: { dx: 0, dy: -NUDGE_STEP },
+    ArrowDown: { dx: 0, dy: NUDGE_STEP },
+    ArrowLeft: { dx: -NUDGE_STEP, dy: 0 },
+    ArrowRight: { dx: NUDGE_STEP, dy: 0 }
+  }
+  const delta = arrowDeltas[event.key]
+  if (delta) {
+    event.preventDefault()
+    emit('nudge-node', { id: nodeId, dx: delta.dx, dy: delta.dy })
+  }
+}
 
 const activeConnectionPath = computed(() => {
   const sourceNode = props.nodes.find(n => n.id === props.connectingSourceId)
@@ -282,3 +313,11 @@ const getStatusBadgeClass = (status) => {
   return classes[status] || classes.ready
 }
 </script>
+
+<style scoped>
+/* Baseline keyboard-accessibility focus indicator for nodes (tabindex="0"). */
+.node-card:focus {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+</style>
