@@ -14,7 +14,7 @@
         title="Asistente Conversacional IA"
         @navigate="$emit('navigate', $event)"
       >
-        <AiChatCard />
+        <AiChatCard id="ai-chat-card" />
       </AnalysisCardWrapper>
 
       <AnalysisCardWrapper

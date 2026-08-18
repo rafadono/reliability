@@ -130,27 +130,60 @@
           </div>
 
           <div v-if="node.type === 'pareto'">
-            <div v-if="node.output && node.output.equipment">
-              Top Causa: <strong>{{ node.output.equipment[0] }}</strong>
+            <div v-if="node.output && node.output.error" class="text-red-500 font-semibold leading-tight">
+              {{ node.output.error }}
+            </div>
+            <div v-else-if="node.output && node.output.vital_few">
+              Vitales: <strong class="text-emerald-600 dark:text-emerald-400">{{ node.output.vital_few.length }}</strong>
+              <div class="mt-2 pt-1 border-t border-gray-100 dark:border-slate-700/60 flex justify-end">
+                <button @click.stop="$emit('navigate', 'quant')" class="text-[9px] text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 font-extrabold">Ver Resultados →</button>
+              </div>
             </div>
             <div v-else>Priorización 80/20</div>
           </div>
 
           <div v-if="node.type === 'jackknife'">
-            <div>Comparar: {{ node.data?.compare_by || 'Equipo' }}</div>
+            <div v-if="node.output && node.output.error" class="text-red-500 font-semibold leading-tight">
+              {{ node.output.error }}
+            </div>
+            <div v-else-if="node.output && node.output.critical_count !== undefined">
+              Críticos: <strong class="text-pink-600 dark:text-pink-400">{{ node.output.critical_count }}</strong> | Crónicos: <strong>{{ node.output.chronic_count }}</strong>
+              <div class="mt-2 pt-1 border-t border-gray-100 dark:border-slate-700/60 flex justify-end">
+                <button @click.stop="$emit('navigate', 'quant')" class="text-[9px] text-pink-600 hover:text-pink-800 dark:text-pink-400 font-extrabold">Ver Resultados →</button>
+              </div>
+            </div>
+            <div v-else>Comparar: {{ node.data?.compare_by || 'Equipo' }}</div>
           </div>
 
           <div v-if="node.type === 'fmeca'">
             <div>Modos: <strong>{{ node.data?.records?.length || 0 }}</strong></div>
+            <div v-if="node.output && node.output.records" class="mt-2 pt-1 border-t border-gray-100 dark:border-slate-700/60 flex justify-end">
+              <button @click.stop="$emit('navigate', 'rcm_fmea')" class="text-[9px] text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 font-extrabold">Ver Matriz →</button>
+            </div>
           </div>
 
           <div v-if="node.type === 'trend'">
-            <div>Perfil mensual KPI</div>
+            <div v-if="node.output && node.output.error" class="text-red-500 font-semibold leading-tight">
+              {{ node.output.error }}
+            </div>
+            <div v-else-if="node.output && node.output.availability !== undefined">
+              MTBF: <strong class="text-teal-600 dark:text-teal-400">{{ node.output.mtbf }}</strong> | Disp: <strong>{{ node.output.availability }}%</strong>
+              <div class="mt-2 pt-1 border-t border-gray-100 dark:border-slate-700/60 flex justify-end">
+                <button @click.stop="$emit('navigate', 'quant')" class="text-[9px] text-teal-600 hover:text-teal-800 dark:text-teal-400 font-extrabold">Ver Tendencia →</button>
+              </div>
+            </div>
+            <div v-else>Perfil mensual KPI</div>
           </div>
 
           <div v-if="node.type === 'ram'">
             <div v-if="node.output && node.output.availability">
               Disponibilidad: <strong class="text-emerald-600 dark:text-emerald-400">{{ node.output.availability }}%</strong>
+              <div class="mt-2 pt-1 border-t border-gray-100 dark:border-slate-700/60 flex justify-end">
+                <button @click.stop="$emit('navigate', 'ram')" class="text-[9px] text-orange-600 hover:text-orange-800 dark:text-orange-400 font-extrabold">Ver Simulación →</button>
+              </div>
+            </div>
+            <div v-else-if="node.output && node.output.error" class="text-red-500 font-semibold leading-tight">
+              {{ node.output.error }}
             </div>
             <div v-else>Monte Carlo (RAM)</div>
           </div>

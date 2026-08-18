@@ -1,5 +1,5 @@
 """
-FastAPI Backend for Reliability Analysis.
+FastAPI Backend for RelAI.
 
 This is the main application file that orchestrates the API.
 It initializes the FastAPI app, sets up middleware, and includes the routers
@@ -29,8 +29,8 @@ logging.getLogger("Models").setLevel(logging.WARNING)
 logging.getLogger("FilterManager").propagate = False
 
 app = FastAPI(
-    title="Reliability Analysis API",
-    description="Backend API for advanced reliability analysis with Pareto and Weibull",
+    title="RelAI API",
+    description="Backend API for RelAI — AI-assisted reliability & maintenance engineering platform",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -67,6 +67,6 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    print("Starting Reliability Analysis API...")
+    print("Starting RelAI API...")
     print("Docs available at: http://localhost:8000/docs")
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

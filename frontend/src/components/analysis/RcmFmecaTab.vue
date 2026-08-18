@@ -14,7 +14,7 @@
         title="Asistente RCM (SAE JA1011)"
         @navigate="$emit('navigate', $event)"
       >
-        <RcmWizardCard :available-equipment="availableEquipment" />
+        <RcmWizardCard id="rcm-wizard-card" :available-equipment="availableEquipment" />
       </AnalysisCardWrapper>
 
       <AnalysisCardWrapper
@@ -24,7 +24,7 @@
         title="Matriz FMECA y RPN (IEC 60812)"
         @navigate="$emit('navigate', $event)"
       >
-        <FmecaTableCard />
+        <FmecaTableCard id="fmeca-table-card" />
       </AnalysisCardWrapper>
     </div>
 

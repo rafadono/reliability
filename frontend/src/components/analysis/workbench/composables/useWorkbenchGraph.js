@@ -41,6 +41,15 @@ export function useWorkbenchGraph(emit) {
     { id: 'edge-3', source: 'filter-1', target: 'kijima-1' }
   ])
 
+  // Which named template (if any) is currently loaded, and a per-template
+  // snapshot of its last graph + results — so switching templates back and
+  // forth restores the previous one instantly instead of rebuilding the
+  // default nodes and re-running the whole pipeline every time (see
+  // loadPipelineTemplate below). Plain object, not reactive: nothing renders
+  // from it directly, it's only read/written imperatively on template switch.
+  const currentTemplateId = ref(null)
+  const templateCache = {}
+
   const inspectorOpen = ref(false)
   const selectedNodeId = ref(null)
 
@@ -324,7 +333,10 @@ export function useWorkbenchGraph(emit) {
     return titles[node.type] || node.type
   }
 
-  const validatePipelineGraph = () => {
+  // Núcleo puro de validación (sin efectos secundarios), reutilizado tanto por
+  // el computed reactivo que habilita/deshabilita el botón "Ejecutar Pipeline"
+  // como por validatePipelineGraph(), que además marca los nodos inválidos.
+  const getPipelineValidationErrors = () => {
     const errors = []
 
     const sourceNodes = nodes.value.filter(n => n.type === 'dataSource')
@@ -357,13 +369,11 @@ export function useWorkbenchGraph(emit) {
       if (node.type !== 'dataSource') {
         const parents = parentMap[node.id] || []
         if (parents.length === 0) {
-          node.status = 'error'
           errors.push({
             node_id: node.id,
             message: `El bloque "${getNodeTitle(node)}" (${node.id}) está desconectado. Debe conectarse a un filtro o fuente de datos aguas arriba.`
           })
         } else if (!isReachableFromSource(node.id)) {
-          node.status = 'error'
           errors.push({
             node_id: node.id,
             message: `El bloque "${getNodeTitle(node)}" (${node.id}) no posee una ruta válida que provenga de una Fuente de Datos.`
@@ -374,7 +384,6 @@ export function useWorkbenchGraph(emit) {
       if (node.type === 'kijima') {
         const models = node.data?.model_types || []
         if (!Array.isArray(models) || models.length === 0) {
-          node.status = 'error'
           errors.push({
             node_id: node.id,
             message: `El bloque Kijima (${node.id}) requiere seleccionar al menos un tipo de modelo (Kijima I o II) en su inspector.`
@@ -386,16 +395,126 @@ export function useWorkbenchGraph(emit) {
         const events = node.data?.basic_events || []
         const invalid = events.some(e => !e.name || !e.name.trim())
         if (invalid) {
-          node.status = 'error'
           errors.push({
             node_id: node.id,
             message: `El bloque FTA (${node.id}) tiene un evento básico sin nombre. Completa o elimina el evento en su inspector.`
           })
         }
       }
+
+      if (node.type === 'fmeca') {
+        const records = node.data?.records || []
+        if (!Array.isArray(records) || records.length === 0) {
+          errors.push({
+            node_id: node.id,
+            message: `El bloque FMECA (${node.id}) requiere al menos un modo de falla registrado en su inspector.`
+          })
+        }
+      }
     })
 
     return errors
+  }
+
+  // Reactivo: refleja el estado del grafo en todo momento (no solo tras un
+  // intento de ejecución), para poder deshabilitar "Ejecutar Pipeline" antes
+  // de que el usuario presione el botón.
+  const pipelineValidationErrors = computed(() => getPipelineValidationErrors())
+
+  const validatePipelineGraph = () => {
+    const errors = getPipelineValidationErrors()
+    const invalidNodeIds = new Set(errors.map(e => e.node_id))
+    nodes.value.forEach(node => {
+      if (invalidNodeIds.has(node.id)) node.status = 'error'
+    })
+    return errors
+  }
+
+  // Applies a { [node_id]: { status, output } } result map (the same shape
+  // POST /workbench/execute returns) onto the current nodes.value and syncs
+  // sharedState (per-type outputs, the executedNodes tab-gating array, the
+  // echoed filter values) from it. Shared by the live-execution success path
+  // and by loadPipelineTemplate's cache-restore path (which replays a
+  // template's last-known results without hitting the API again).
+  const applyNodeResults = (resultsMap) => {
+    const executedTypes = new Set()
+    nodes.value.forEach(n => {
+      const resObj = resultsMap[n.id]
+      if (!resObj) {
+        n.status = 'ready'
+        return
+      }
+
+      n.output = resObj.output || resObj
+      n.status = resObj.status === 'success' ? 'completed' : 'error'
+      if (resObj.status !== 'success') return
+
+      executedTypes.add(n.type)
+
+      // Store node data & outputs in sharedState
+      sharedState.nodeConfigs[n.type] = n.data || {}
+      sharedState.nodeConfigs[n.id] = n.data || {}
+      sharedState.nodeOutputs[n.type] = resObj.output || resObj
+      sharedState.nodeOutputs[n.id] = resObj.output || resObj
+
+      if (n.type === 'filter') {
+        const d = n.data || {}
+        sharedState.filters.plant = d.plant || ''
+        sharedState.filters.equipment = d.equipment || ''
+        sharedState.filters.type = Array.isArray(d.type) ? d.type : (d.type ? [d.type] : [])
+        sharedState.filters.mdf = Array.isArray(d.mdf) ? d.mdf : (d.mdf ? [d.mdf] : [])
+        sharedState.filters.censored_types = d.censored_types || []
+        sharedState.filters.censored_mdfs = d.censored_mdfs || []
+      }
+
+      if (n.type === 'weibull') {
+        sharedState.weibull = resObj.output
+        executedTypes.add('weibull_kijima')
+      }
+      if (n.type === 'kijima') {
+        sharedState.kijima = resObj.output
+        executedTypes.add('weibull_kijima')
+      }
+      if (n.type === 'pareto') {
+        sharedState.pareto = resObj.output
+      }
+      if (n.type === 'jackknife') {
+        sharedState.jackknife = resObj.output
+      }
+      if (n.type === 'criticality') {
+        sharedState.criticality = resObj.output
+      }
+      if (n.type === 'event_plot') {
+        sharedState.event_plot = resObj.output
+      }
+      if (n.type === 'ram' || n.type === 'ramSimulator') {
+        sharedState.ram = resObj.output
+        executedTypes.add('ram_sim')
+      }
+      if (n.type === 'apm') {
+        sharedState.apm = resObj.output
+      }
+      if (n.type === 'trend') {
+        sharedState.trend = resObj.output
+      }
+      if (n.type === 'rcm') {
+        sharedState.rcm = resObj.output
+      }
+      if (n.type === 'fmeca') {
+        sharedState.fmecaRecords = resObj.output
+        executedTypes.add('fmeca')
+      }
+      if (n.type === 'rca') {
+        sharedState.rca = resObj.output
+      }
+      if (n.type === 'fta') {
+        sharedState.fta = resObj.output
+      }
+      if (n.type === 'comment_mining') {
+        sharedState.comment_mining = resObj.output
+      }
+    })
+    sharedState.executedNodes = Array.from(executedTypes)
   }
 
   // Ejecutar Pipeline DAG
@@ -439,83 +558,17 @@ export function useWorkbenchGraph(emit) {
       const res = await apiService.executeWorkbenchPipeline(payload)
       if (res.data) {
         if (res.data.results) {
-          const executedTypes = new Set(sharedState.executedNodes || [])
-          nodes.value.forEach(n => {
-            if (res.data.results[n.id]) {
-              const resObj = res.data.results[n.id]
-              n.output = resObj.output || resObj
-              n.status = resObj.status === 'success' ? 'completed' : 'error'
-              if (resObj.status === 'success') {
-                executedTypes.add(n.type)
+          applyNodeResults(res.data.results)
 
-                // Store node data & outputs in sharedState
-                sharedState.nodeConfigs[n.type] = n.data || {}
-                sharedState.nodeConfigs[n.id] = n.data || {}
-                sharedState.nodeOutputs[n.type] = resObj.output || resObj
-                sharedState.nodeOutputs[n.id] = resObj.output || resObj
-
-                if (n.type === 'filter') {
-                  const d = n.data || {}
-                  sharedState.filters.plant = d.plant || ''
-                  sharedState.filters.equipment = d.equipment || ''
-                  sharedState.filters.type = Array.isArray(d.type) ? d.type : (d.type ? [d.type] : [])
-                  sharedState.filters.mdf = Array.isArray(d.mdf) ? d.mdf : (d.mdf ? [d.mdf] : [])
-                  sharedState.filters.censored_types = d.censored_types || []
-                  sharedState.filters.censored_mdfs = d.censored_mdfs || []
-                }
-
-                if (n.type === 'weibull') {
-                  sharedState.weibull = resObj.output
-                  executedTypes.add('weibull_kijima')
-                }
-                if (n.type === 'kijima') {
-                  sharedState.kijima = resObj.output
-                  executedTypes.add('weibull_kijima')
-                }
-                if (n.type === 'pareto') {
-                  sharedState.pareto = resObj.output
-                }
-                if (n.type === 'jackknife') {
-                  sharedState.jackknife = resObj.output
-                }
-                if (n.type === 'criticality') {
-                  sharedState.criticality = resObj.output
-                }
-                if (n.type === 'event_plot') {
-                  sharedState.event_plot = resObj.output
-                }
-                if (n.type === 'ram' || n.type === 'ramSimulator') {
-                  sharedState.ram = resObj.output
-                  executedTypes.add('ram_sim')
-                }
-                if (n.type === 'apm') {
-                  sharedState.apm = resObj.output
-                }
-                if (n.type === 'trend') {
-                  sharedState.trend = resObj.output
-                }
-                if (n.type === 'rcm') {
-                  sharedState.rcm = resObj.output
-                }
-                if (n.type === 'fmeca') {
-                  sharedState.fmecaRecords = resObj.output
-                  executedTypes.add('fmeca')
-                }
-                if (n.type === 'rca') {
-                  sharedState.rca = resObj.output
-                }
-                if (n.type === 'fta') {
-                  sharedState.fta = resObj.output
-                }
-                if (n.type === 'comment_mining') {
-                  sharedState.comment_mining = resObj.output
-                }
-              }
-            } else {
-              n.status = 'ready'
-            }
-          })
-          sharedState.executedNodes = Array.from(executedTypes)
+          // A run that completes without throwing can still leave individual
+          // nodes in 'error' (e.g. a template auto-executed with a blank
+          // filter, or a node whose config no longer matches the data). Open
+          // the log console so that failure is visible instead of the user
+          // just seeing red nodes with no obvious explanation and assuming
+          // the whole pipeline silently refuses to run.
+          if (nodes.value.some(n => n.status === 'error')) {
+            isConsoleOpen.value = true
+          }
         }
         if (res.data.logs && Array.isArray(res.data.logs)) {
           workbenchLogs.value = [...res.data.logs, ...workbenchLogs.value].slice(0, 100)
@@ -523,6 +576,7 @@ export function useWorkbenchGraph(emit) {
       }
     } catch (err) {
       console.error('Error executing pipeline:', err)
+      isConsoleOpen.value = true
       nodes.value.forEach(n => { n.status = 'error' })
       workbenchLogs.value.unshift({
         id: `err-${Date.now()}`,
@@ -539,6 +593,35 @@ export function useWorkbenchGraph(emit) {
 
   // Cargar Plantillas de Flujo
   const loadPipelineTemplate = (type) => {
+    // Snapshot the outgoing template's current graph (including whatever the
+    // user configured in the Filtro node, plus each node's last output/status)
+    // before replacing it, so switching back to it later restores instantly
+    // instead of rebuilding the hardcoded defaults and re-running from scratch.
+    if (currentTemplateId.value && currentTemplateId.value !== type) {
+      templateCache[currentTemplateId.value] = {
+        nodes: JSON.parse(JSON.stringify(nodes.value)),
+        edges: JSON.parse(JSON.stringify(edges.value))
+      }
+    }
+
+    const cached = templateCache[type]
+    if (cached) {
+      nodes.value = JSON.parse(JSON.stringify(cached.nodes))
+      edges.value = JSON.parse(JSON.stringify(cached.edges))
+      currentTemplateId.value = type
+
+      // Replay the cached results into sharedState/executedNodes instead of
+      // hitting the API again — this is the whole point of caching.
+      const resultsMap = {}
+      nodes.value.forEach(n => {
+        if (n.status === 'completed') {
+          resultsMap[n.id] = { status: 'success', output: n.output }
+        }
+      })
+      applyNodeResults(resultsMap)
+      return
+    }
+
     if (type === 'basic_weibull') {
       nodes.value = [
         { id: 'source-1', type: 'dataSource', data: {}, x: 50, y: 150, status: 'ready', output: null },
@@ -632,6 +715,7 @@ export function useWorkbenchGraph(emit) {
         { id: 'edge-22', source: 'filter-8', target: 'apm-8' }
       ]
     }
+    currentTemplateId.value = type
     executePipeline()
   }
 
@@ -671,6 +755,7 @@ export function useWorkbenchGraph(emit) {
     resetZoom,
     calculateEdgePath,
     updateDropdownCascade,
+    pipelineValidationErrors,
     executePipeline,
     loadPipelineTemplate,
     getSummaryStats,

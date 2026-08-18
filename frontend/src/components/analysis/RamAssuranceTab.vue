@@ -13,7 +13,7 @@
         node-type="ram_sim"
         @navigate="$emit('navigate', $event)"
       >
-        <RamSimulatorCard :available-equipment="availableEquipment" />
+        <RamSimulatorCard id="ram-simulator-card" :available-equipment="availableEquipment" />
       </AnalysisCardWrapper>
 
       <AnalysisCardWrapper
@@ -22,7 +22,7 @@
         node-type="apm"
         @navigate="$emit('navigate', $event)"
       >
-        <ApmCard :available-equipment="availableEquipment" :available-types="availableTypes" />
+        <ApmCard id="apm-card" :available-equipment="availableEquipment" :available-types="availableTypes" />
       </AnalysisCardWrapper>
 
       <AnalysisCardWrapper
@@ -31,7 +31,7 @@
         node-type="trend"
         @navigate="$emit('navigate', $event)"
       >
-        <TrendCard :available-equipment="availableEquipment" :available-types="availableTypes" />
+        <TrendCard id="trend-card" :available-equipment="availableEquipment" :available-types="availableTypes" />
       </AnalysisCardWrapper>
     </div>
 

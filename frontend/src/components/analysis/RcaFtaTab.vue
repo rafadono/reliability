@@ -14,7 +14,7 @@
         title="Análisis Causa Raíz RCA (Diagrama de Ishikawa)"
         @navigate="$emit('navigate', $event)"
       >
-        <IshikawaCard :available-equipment="availableEquipment" />
+        <IshikawaCard id="ishikawa-card" :available-equipment="availableEquipment" />
       </AnalysisCardWrapper>
 
       <AnalysisCardWrapper
@@ -24,7 +24,7 @@
         title="Árbol de Fallas FTA (IEC 61025)"
         @navigate="$emit('navigate', $event)"
       >
-        <FtaCanvasCard />
+        <FtaCanvasCard id="fta-canvas-card" />
       </AnalysisCardWrapper>
     </div>
 

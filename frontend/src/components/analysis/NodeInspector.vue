@@ -73,9 +73,11 @@
 
     <!-- Botones de Acción de Pie de Inspector -->
     <div class="pt-4 border-t border-gray-100 dark:border-slate-800/80 space-y-2">
-      <button 
+      <button
         @click="$emit('run')"
-        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-lg transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+        :disabled="validationErrors.length > 0"
+        :title="validationErrors.length > 0 ? validationErrors.map(e => e.message).join('\n') : ''"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 rounded-lg transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -106,7 +108,8 @@ defineProps({
   isOpen: { type: Boolean, required: true },
   node: { type: Object, required: true },
   availableEquipment: { type: Array, required: true },
-  filterOptions: { type: Object, default: () => ({ types: [], mdfs: [] }) }
+  filterOptions: { type: Object, default: () => ({ types: [], mdfs: [] }) },
+  validationErrors: { type: Array, default: () => [] }
 })
 
 defineEmits(['close', 'run', 'delete', 'filter-changed', 'upload-file', 'reset'])

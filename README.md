@@ -1,11 +1,11 @@
-# Reliability Analysis Platform
+# RelAI
 
 [![CI](https://github.com/rafadono/reliability/actions/workflows/ci.yml/badge.svg)](https://github.com/rafadono/reliability/actions/workflows/ci.yml)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)
 ![Vue 3](https://img.shields.io/badge/vue-3.x-brightgreen.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)
 
-Modern reliability engineering analysis platform built with Vue 3 and FastAPI.
+AI-assisted reliability & maintenance engineering platform, built with Vue 3 and FastAPI.
 
 ## Key Capabilities
 
@@ -29,9 +29,9 @@ Run the entire stack containing both the backend and frontend:
 docker-compose up --build -d
 ```
 
-* **Frontend Dashboard**: http://localhost:5173
-* **FastAPI Interactive Swagger Docs**: http://localhost:8000/docs
-* **FastAPI ReDoc**: http://localhost:8000/redoc
+* **Frontend Dashboard**: http://localhost:5180
+* **FastAPI Interactive Swagger Docs**: http://localhost:8008/docs
+* **FastAPI ReDoc**: http://localhost:8008/redoc
 
 ### GPU Acceleration for AI Models
 The Hugging Face models used for text mining run on CPU by default. If you have an Nvidia GPU, change `USE_GPU: 0` to `USE_GPU: 1` under the backend build section in `docker-compose.yml`, then rebuild: `docker-compose up --build -d`.
@@ -81,6 +81,7 @@ Customize the LLM provider by creating a `.env` file in the root directory:
 * `GEMINI_API_KEY`: API key for Google Gemini.
 * `OPENAI_API_KEY`: API key for OpenAI.
 * `OLLAMA_BASE_URL`: API URL for local Ollama server (default: `http://localhost:11434`).
+* `VITE_SHOW_SIDEBAR`: Set to `true` to re-enable the legacy left sidebar navigation (default: `false`, hidden — it currently duplicates the top tab bar; see `frontend/src/featureFlags.js`).
 
 ---
 

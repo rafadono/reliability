@@ -1,6 +1,6 @@
 {
   "navbar": {
-    "title": "Reliability Analysis"
+    "title": "RelAI"
   },
   "upload": {
     "title": "Upload Data",
@@ -271,6 +271,10 @@
       "title": "Kijima Imperfect Repair Models (GRP)",
       "desc": "Fit Kijima I & II virtual age models (Constant and Time-Dependent) compared to traditional Weibull.",
       "models_to_plot": "Models to Plot",
+      "only_weibull": "Weibull Only",
+      "select_all_models": "Compare All",
+      "compare_last_cycle": "Compare Kijima last cycle",
+      "compare_last_cycle_hint": "Overlays, for each fitted Kijima model, its reliability curve starting from the virtual age reached at its last cycle (instead of from zero), so it can be compared against the traditional Weibull curve.",
       "model_type": "Model",
       "weibull": "Traditional Weibull",
       "k1_c": "Kijima I (Constant)",

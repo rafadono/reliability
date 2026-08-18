@@ -17,10 +17,11 @@
     <!-- Acciones Principales -->
     <div class="flex items-center gap-2">
       <!-- Botón Ejecutar Pipeline -->
-      <button 
+      <button
         @click="$emit('execute')"
-        :disabled="loading"
-        class="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md hover:shadow-indigo-500/25 flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+        :disabled="loading || validationErrors.length > 0"
+        :title="validationErrors.length > 0 ? validationErrors.map(e => e.message).join('\n') : ''"
+        class="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md hover:shadow-indigo-500/25 flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         <svg v-if="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -31,6 +32,9 @@
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
         <span>{{ loading ? $t('workbench.executing') : $t('workbench.run_pipeline') }}</span>
+        <span v-if="!loading && validationErrors.length > 0" class="bg-white/20 text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-full">
+          {{ validationErrors.length }}
+        </span>
       </button>
 
       <!-- Menú Desplegable: Añadir Bloque -->
@@ -189,7 +193,8 @@
 defineProps({
   loading: { type: Boolean, default: false },
   isConsoleOpen: { type: Boolean, default: false },
-  errorCount: { type: Number, default: 0 }
+  errorCount: { type: Number, default: 0 },
+  validationErrors: { type: Array, default: () => [] }
 })
 
 defineEmits(['execute', 'add-block', 'load-template', 'reset-zoom', 'toggle-console'])

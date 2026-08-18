@@ -5,11 +5,11 @@
         <div class="flex items-center">
           <div class="w-64 px-6 py-4 flex items-center gap-3 shrink-0">
             <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
-              <span class="text-white font-bold text-lg">RA</span>
+              <span class="text-white font-bold text-lg">AI</span>
             </div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ $t('navbar.title') }}</h1>
           </div>
-          <button @click="isSidebarOpen = !isSidebarOpen" class="p-2 ml-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors" title="Toggle Sidebar">
+          <button v-if="sidebarEnabled" @click="isSidebarOpen = !isSidebarOpen" class="p-2 ml-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-md transition-colors" title="Toggle Sidebar">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -45,6 +45,7 @@
 
     <div class="flex h-[calc(100vh-80px)]">
       <Sidebar
+        v-if="sidebarEnabled"
         v-show="isSidebarOpen"
         @notify="showNotification"
         @export-pdf="handleExportPDF"
@@ -81,12 +82,13 @@ import Sidebar from './components/Sidebar.vue'
 import { apiService } from './api'
 import html2pdf from 'html2pdf.js'
 import { sharedState } from './sharedState'
+import { sidebarEnabled } from './featureFlags'
 
 const { locale, t } = useI18n()
 const isLoading = ref(false)
 const notification = ref('')
 const dashboardKey = ref(0)
-const isSidebarOpen = ref(true)
+const isSidebarOpen = ref(sidebarEnabled)
 const isDarkMode = ref(false)
 
 // Deep-linking: the active tab lives in the URL's ?tab= query param so it can be

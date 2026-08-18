@@ -253,7 +253,7 @@ def execute_weibull_node(node: NodeSchema, inputs: Dict[str, Any]) -> Dict[str, 
 
         mttr_val = 0.0
         if "TTX" in df.columns:
-            failures_df = df[df["Censored"] == 0]
+            failures_df = df[df["Censored"] == 0] if "Censored" in df.columns else df
             if not failures_df.empty:
                 mttr_val = float(failures_df["TTX"].mean())
             else:
@@ -416,17 +416,20 @@ def execute_pareto_node(node: NodeSchema, inputs: Dict[str, Any]) -> Dict[str, A
 
     from src.reliability_analysis.analysis.pareto import ParetoAnalyzer
 
-    group_by = node.data.get("group_by", "Equipment")
-    if group_by.lower() in ("equipo", "equipment"):
-        result = ParetoAnalyzer.analyze_by_equipment(df)
-    elif group_by.lower() in ("tipo", "type"):
-        result = ParetoAnalyzer.analyze_by_type(df)
-    else:
-        result = ParetoAnalyzer.analyze_by_failure_mode(df)
+    try:
+        group_by = node.data.get("group_by", "Equipment")
+        if group_by.lower() in ("equipo", "equipment"):
+            result = ParetoAnalyzer.analyze_by_equipment(df)
+        elif group_by.lower() in ("tipo", "type"):
+            result = ParetoAnalyzer.analyze_by_type(df)
+        else:
+            result = ParetoAnalyzer.analyze_by_failure_mode(df)
 
-    vital, trivial, stats = ParetoAnalyzer.get_80_20_split(result)
+        vital, trivial, stats = ParetoAnalyzer.get_80_20_split(result)
 
-    return {"group_by": group_by, "vital_few": vital[:5], "stats": stats}
+        return {"group_by": group_by, "vital_few": vital[:5], "stats": stats}
+    except Exception as e:
+        return {"error": f"Fallo al calcular Pareto: {str(e)}"}
 
 
 def execute_jackknife_node(node: NodeSchema, inputs: Dict[str, Any]) -> Dict[str, Any]:
@@ -434,48 +437,56 @@ def execute_jackknife_node(node: NodeSchema, inputs: Dict[str, Any]) -> Dict[str
     if df is None:
         raise ValueError("El análisis Jackknife requiere un conjunto de datos.")
 
-    group_col = node.data.get("compare_by", "Equipment")
-    if group_col not in df.columns:
-        group_col = "Equipment" if "Equipment" in df.columns else df.columns[0]
+    try:
+        group_col = node.data.get("compare_by", "Equipment")
+        if group_col not in df.columns:
+            group_col = "Equipment" if "Equipment" in df.columns else df.columns[0]
 
-    stats = (
-        df.groupby(group_col)
-        .agg(
-            failures=(group_col, "count"),
-            total_downtime=("TTX", "sum"),
-            avg_downtime=("TTX", "mean"),
+        if "TTX" not in df.columns:
+            return {
+                "error": "El dataset filtrado no contiene la columna 'TTX' (tiempo de detención) requerida para Jackknife."
+            }
+
+        stats = (
+            df.groupby(group_col)
+            .agg(
+                failures=(group_col, "count"),
+                total_downtime=("TTX", "sum"),
+                avg_downtime=("TTX", "mean"),
+            )
+            .reset_index()
         )
-        .reset_index()
-    )
 
-    avg_failures = float(stats["failures"].mean()) if not stats.empty else 0
-    avg_total = float(stats["total_downtime"].mean()) if not stats.empty else 0
+        avg_failures = float(stats["failures"].mean()) if not stats.empty else 0
+        avg_total = float(stats["total_downtime"].mean()) if not stats.empty else 0
 
-    critical_items = []
-    chronic_items = []
-    acute_items = []
+        critical_items = []
+        chronic_items = []
+        acute_items = []
 
-    for _, row in stats.iterrows():
-        name = str(row[group_col])
-        x = float(row["failures"])
-        y = float(row["total_downtime"])
+        for _, row in stats.iterrows():
+            name = str(row[group_col])
+            x = float(row["failures"])
+            y = float(row["total_downtime"])
 
-        if x > avg_failures and y > avg_total:
-            critical_items.append(name)
-        elif x <= avg_failures and y > avg_total:
-            acute_items.append(name)
-        elif x > avg_failures and y <= avg_total:
-            chronic_items.append(name)
+            if x > avg_failures and y > avg_total:
+                critical_items.append(name)
+            elif x <= avg_failures and y > avg_total:
+                acute_items.append(name)
+            elif x > avg_failures and y <= avg_total:
+                chronic_items.append(name)
 
-    return {
-        "critical_count": len(critical_items),
-        "chronic_count": len(chronic_items),
-        "acute_count": len(acute_items),
-        "critical_list": critical_items[:5],
-        "chronic_list": chronic_items[:5],
-        "acute_list": acute_items[:5],
-        "compare_by": group_col,
-    }
+        return {
+            "critical_count": len(critical_items),
+            "chronic_count": len(chronic_items),
+            "acute_count": len(acute_items),
+            "critical_list": critical_items[:5],
+            "chronic_list": chronic_items[:5],
+            "acute_list": acute_items[:5],
+            "compare_by": group_col,
+        }
+    except Exception as e:
+        return {"error": f"Fallo al calcular Jackknife: {str(e)}"}
 
 
 def execute_trend_node(node: NodeSchema, inputs: Dict[str, Any]) -> Dict[str, Any]:
@@ -530,8 +541,11 @@ def execute_apm_node(node: NodeSchema, inputs: Dict[str, Any]) -> Dict[str, Any]
     if df is None:
         raise ValueError("El análisis APM requiere un conjunto de datos.")
     compare_by = node.data.get("compare_by", "equipment")
-    bad_actors = compute_bad_actors(df, compare_by)
-    return {"bad_actors": bad_actors, "compare_by": compare_by}
+    try:
+        bad_actors = compute_bad_actors(df, compare_by)
+        return {"bad_actors": bad_actors, "compare_by": compare_by}
+    except Exception as e:
+        return {"error": f"Fallo al calcular APM: {str(e)}"}
 
 
 def execute_rcm_node(node: NodeSchema, inputs: Dict[str, Any]) -> Dict[str, Any]:
@@ -762,6 +776,24 @@ def execute_comment_mining_node(
     }
 
 
+def _result_from_output(output: Any, elapsed_ms: float) -> Dict[str, Any]:
+    """
+    Several execute_*_node functions signal a runtime failure (e.g. insufficient
+    data, an unresolved equipment, a fitting exception) by returning a plain
+    {"error": "..."} dict instead of raising, so the rest of the pipeline can
+    keep running. This maps that convention onto the node's reported status,
+    instead of unconditionally marking it "success" (which previously caused
+    failed nodes to render as completed with the error tucked inside output).
+    """
+    if isinstance(output, dict) and "error" in output:
+        return {
+            "status": "error",
+            "error": output["error"],
+            "execution_ms": elapsed_ms,
+        }
+    return {"status": "success", "output": output, "execution_ms": elapsed_ms}
+
+
 @router.post("/workbench/execute", tags=["Workbench"])
 async def execute_pipeline(req: PipelineExecuteRequest) -> Dict[str, Any]:
     """Sorts and executes the analytical pipeline nodes sequentially with DAG multi-input support."""
@@ -836,141 +868,85 @@ async def execute_pipeline(req: PipelineExecuteRequest) -> Dict[str, Any]:
                 res = execute_weibull_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "kijima":
                 res = execute_kijima_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "fmeca":
                 res = execute_fmeca_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type in ("ram", "ramSimulator"):
                 res = execute_ram_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "pareto":
                 res = execute_pareto_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "jackknife":
                 res = execute_jackknife_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "trend":
                 res = execute_trend_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "criticality":
                 res = execute_criticality_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "event_plot":
                 res = execute_event_plot_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "apm":
                 res = execute_apm_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "rcm":
                 res = execute_rcm_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "rca":
                 res = execute_rca_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "fta":
                 res = execute_fta_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             elif node_type == "comment_mining":
                 res = execute_comment_mining_node(node, node_inputs)
                 context[node_id] = {"df": node_inputs.get("df")}
                 elapsed = round((time.time() - start_time) * 1000, 2)
-                results[node_id] = {
-                    "status": "success",
-                    "output": res,
-                    "execution_ms": elapsed,
-                }
+                results[node_id] = _result_from_output(res, elapsed)
 
             else:
                 results[node_id] = {

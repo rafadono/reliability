@@ -1,11 +1,12 @@
 <template>
   <div class="h-[70vh] min-h-[400px] flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-md">
     <!-- Barra de Herramientas Superior -->
-    <WorkbenchToolbar 
-      :loading="loading" 
+    <WorkbenchToolbar
+      :loading="loading"
       :is-console-open="isConsoleOpen"
       :error-count="errorCount"
-      @execute="executePipeline" 
+      :validation-errors="pipelineValidationErrors"
+      @execute="executePipeline"
       @add-block="addBlock" 
       @load-template="loadPipelineTemplate" 
       @reset-zoom="resetZoom" 
@@ -50,12 +51,13 @@
     />
 
     <!-- Inspector lateral deslizable -->
-    <NodeInspector 
+    <NodeInspector
       v-if="inspectorOpen && selectedNode"
       :is-open="inspectorOpen"
       :node="selectedNode"
       :available-equipment="availableEquipment"
       :filter-options="currentFilterOptions"
+      :validation-errors="pipelineValidationErrors"
       @close="inspectorOpen = false"
       @delete="deleteBlock"
       @run="executePipeline"
@@ -107,6 +109,7 @@ const {
   resetZoom,
   calculateEdgePath,
   updateDropdownCascade,
+  pipelineValidationErrors,
   executePipeline,
   loadPipelineTemplate,
   getSummaryStats,

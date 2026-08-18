@@ -1,6 +1,6 @@
 {
   "navbar": {
-    "title": "Análisis de Confiabilidad"
+    "title": "RelAI"
   },
   "upload": {
     "title": "Carga de Datos",
@@ -271,6 +271,10 @@
       "title": "Modelos Imperfectos de Kijima (GRP)",
       "desc": "Ajuste de modelos de edad virtual Kijima I & II (Constante y Dependiente del Tiempo) comparados con Weibull tradicional.",
       "models_to_plot": "Modelos a Graficar",
+      "only_weibull": "Solo Weibull",
+      "select_all_models": "Comparar Todos",
+      "compare_last_cycle": "Comparar último ciclo Kijima",
+      "compare_last_cycle_hint": "Superpone, para cada modelo Kijima ajustado, su curva de confiabilidad partiendo desde la edad virtual alcanzada en el último ciclo (en vez de desde cero), para compararla contra la Weibull tradicional.",
       "model_type": "Modelo",
       "weibull": "Weibull Tradicional",
       "k1_c": "Kijima I (Constante)",

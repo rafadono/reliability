@@ -83,15 +83,9 @@ npm-debug.log
 data/
 uploads/
 
-# PDF Reference documents
-Modelos De Confiabilidad Kijima.pdf
+# Local reference notes
 kijima_analysis.md
 ram_simulation_logic.md
 
 # Code graph index directories
 .codegraph/
-
-# Temporary & Obsolete build/script directories
-scripts/
-temp-test/
-pdf-forge-exports/

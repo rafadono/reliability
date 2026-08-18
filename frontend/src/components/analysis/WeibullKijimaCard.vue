@@ -80,7 +80,31 @@
 
       <!-- Curve selections (TBX Mode Only) -->
       <div v-if="activeTab === 'TBX'" class="mb-6 p-4 bg-white dark:bg-slate-800/40 rounded-lg border border-gray-200 dark:border-slate-700">
-        <label class="block text-sm font-bold text-gray-800 dark:text-slate-200 mb-2">{{ $t('charts.kijima.models_to_plot') }}</label>
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <label class="block text-sm font-bold text-gray-800 dark:text-slate-200">{{ $t('charts.kijima.models_to_plot') }}</label>
+          <div class="flex gap-2">
+            <button
+              @click="showOnlyWeibull"
+              class="px-2.5 py-1 text-xs font-semibold rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 dark:text-indigo-400 transition-colors"
+            >
+              {{ $t('charts.kijima.only_weibull') }}
+            </button>
+            <button
+              @click="showAllModels"
+              class="px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-100 hover:bg-slate-200 text-gray-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition-colors"
+            >
+              {{ $t('charts.kijima.select_all_models') }}
+            </button>
+            <label
+              v-if="kijimaResult.length > 0"
+              class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-slate-50 dark:bg-slate-900 text-gray-600 dark:text-slate-300 cursor-pointer"
+              :title="$t('charts.kijima.compare_last_cycle_hint')"
+            >
+              <input type="checkbox" v-model="compareLastCycle" class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5" />
+              <span>{{ $t('charts.kijima.compare_last_cycle') }}</span>
+            </label>
+          </div>
+        </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <label v-for="opt in modelOptions" :key="opt.id"
             class="flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
@@ -448,6 +472,13 @@ const censoredTypes = ref([])
 
 // Active curves to draw (for TBX mode)
 const selectedCurves = ref(['weibull', 'k1_c', 'k2_c', 'k1_td', 'k2_td', 'k1_td2', 'k2_td2'])
+// Overlay, on top of whatever is in selectedCurves, each fitted Kijima model's
+// reliability curve re-based at its own last observed virtual age (V_curve's
+// final value) instead of from t=0 — i.e. "if the asset's next interval starts
+// from where the last repair actually left it, how does that compare to a
+// from-new Weibull fit". Independent of selectedCurves so it stays visible even
+// when isolating the plain Weibull curve via showOnlyWeibull().
+const compareLastCycle = ref(false)
 
 // Fit results
 const weibullResult = ref(null) // holds traditional Weibull results
@@ -659,6 +690,20 @@ const toggleExpand = (chartKey) => {
 watch(selectedCurves, () => {
   renderCharts()
 }, { deep: true })
+
+watch(compareLastCycle, () => {
+  renderCharts()
+})
+
+// Quick presets for the "Modelos a Graficar" checkbox row — purely a display
+// filter over data already fetched, so no refit/API call is needed here.
+const showOnlyWeibull = () => {
+  selectedCurves.value = ['weibull']
+}
+
+const showAllModels = () => {
+  selectedCurves.value = modelOptions.value.map(opt => opt.id)
+}
 
 watch(isVirtualAgeCollapsed, () => {
   nextTick(() => {
@@ -960,6 +1005,39 @@ const renderRelAndHazardCharts = () => {
         })
       }
     })
+
+    // "Último ciclo" overlay: re-bases each Kijima model's own Weibull shape
+    // (beta/eta) at the virtual age it actually reached after its last observed
+    // repair (last point of V_curve), instead of from t=0 — so it's directly
+    // comparable to the plain from-new Weibull curve above on the same axes.
+    if (compareLastCycle.value) {
+      kijimaResult.value.forEach(m => {
+        const cfg = kNames[m.model_name]
+        if (!cfg || m.model_name === 'Weibull') return
+        if (!Array.isArray(m.V_curve) || m.V_curve.length === 0) return
+        if (m.beta == null || m.eta == null || m.eta === 0) return
+
+        const vLast = m.V_curve[m.V_curve.length - 1]
+        const r0 = Math.exp(-Math.pow(vLast / m.eta, m.beta))
+        if (!isFinite(r0) || r0 <= 0) return
+
+        const times = m.t || []
+        const lastCyclePoints = times
+          .map(t => ({ x: t, y: Math.exp(-Math.pow((vLast + t) / m.eta, m.beta)) / r0 }))
+          .filter(p => p.x != null && isFinite(p.y))
+
+        relDatasets.push({
+          label: `${m.model_name} — último ciclo (V=${vLast.toFixed(1)})`,
+          data: lastCyclePoints,
+          borderColor: cfg.color,
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          tension: 0
+        })
+      })
+    }
   }
 
   // Setup options

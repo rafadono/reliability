@@ -25,7 +25,7 @@ LOG_FORMAT = os.getenv(
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
-APP_NAME = "Reliability Analysis"
+APP_NAME = "RelAI"
 APP_VERSION = "2.0.0"
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
